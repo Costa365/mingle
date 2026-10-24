@@ -7,9 +7,9 @@ Deliver the application in [product.md](product.md) using the proposed
 [idea.md](../idea.md). **M0 — Buildable foundation** and **M1 — Rooms, identity,
 and recovery foundation** are implemented and locally verified. Teams can create
 and join rooms, manage a live lobby, and recover membership after reload or API
-restart. M2–M6 remain unimplemented; playable games start with M2. The GitHub
-remote is now configured; hosted CI gates remain pending until the complete
-workflow passes. The first hosted run exposed a Compose compatibility issue.
+restart. **M0 and M1 are complete**, including their hosted CI acceptance gates.
+The [successful GitHub run](https://github.com/Costa365/mingle/actions/runs/40099054327)
+verified commit `bc5e96d`. M2–M6 remain unimplemented; playable games start with M2.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -27,8 +27,8 @@ Testing is part of each milestone, not deferred to M6.
   behavior. Functional tests exercise real API/hub and storage behavior, plus
   browser flows for UI features, including relevant failure and permission cases.
 - Both layers must pass locally and in CI before a feature is marked complete.
-  Until CI is available in M0, record local results and keep CI verification
-  pending; M0 is not complete until the required CI suites pass too.
+  If hosted CI is unavailable, record it as an explicit pending acceptance gate.
+  Update implementation checkboxes and link the successful CI run when it passes.
 - Missing, skipped, quarantined, or blocked required tests leave the feature
   incomplete. Manual review and a test of a similar feature are not substitutes.
 - Bug fixes include regression coverage. Follow the detailed test definitions in
@@ -38,35 +38,33 @@ M0 acceptance coverage (paths are relative to the repository root):
 
 | Feature / acceptance criteria | Unit tests | Functional tests | Execution evidence / remaining gaps |
 | --- | --- | --- | --- |
-| People icon replaces all star marks; wordmark reads "Mingle" with the tagline "Team games"; headings contain no full stops | `web/src/app/App.test.tsx`: brand name/tagline, decorative icon semantics, punctuation on home/how-to/not-found/detail and error headings | `web/e2e/foundation.spec.ts`: loaded icons, exact brand/tagline and Mingle browser titles, punctuation across routes and error state, both viewports, axe and keyboard checks | 27 frontend unit tests and 20 browser cases pass locally; build/lint/format pass; screenshots reviewed; hosted CI pending |
-| All five catalogue entries have valid metadata; exact IDs resolve and unknown IDs fail | `tests/TeamGames.Core.Tests/GameCatalogTests.cs`: metadata, uniqueness, exact/unknown IDs; `web/src/api/games.test.ts`: malformed/duplicate payloads and request failures | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: catalogue and every detail through HTTP; `web/e2e/foundation.spec.ts`: all five detail flows | Local .NET and frontend suites pass; hosted CI pending |
-| Home, detail, how-to, and not-found routes render and allow navigation; gameplay availability is clear | `web/src/app/App.test.tsx`: each detail route, navigation, instructions, recovery links, room hosting and future-gameplay explanation | `web/e2e/foundation.spec.ts`: each route through the real backend, direct loads and reloads, desktop/mobile | Browser results recorded below; hosted CI pending |
-| Loading is announced; an API failure offers retry and recovers | `web/src/app/App.test.tsx`: pending request, cancellation, error/retry on home and detail; `web/src/api/games.test.ts`: rejected/invalid responses | `web/e2e/foundation.spec.ts`: delayed real request and real API stop/restart/retry in both viewports | Browser results recorded below; hosted CI pending |
-| Storage paths are validated; fresh SQLite is migrated; readiness reflects storage while liveness remains independent | `tests/TeamGames.Core.Tests/StoragePathsTests.cs`: relative/absolute/invalid paths; `tests/TeamGames.Api.Tests/StorageHealthCheckTests.cs`: success, failure, sanitized exceptions, cancellation | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: migration, dropped storage table, invalid/unwritable configuration | Local .NET suites pass; hosted CI pending |
-| Database identity and Data Protection keys survive host/container recreation | Storage path and readiness unit cases above cover persistence configuration and failure reporting | `FoundationFunctionalTests.cs`: fresh host restores installation and decrypts a protected value; `scripts/verify-compose.sh`: recreates API and compares database, migrations, WAL mode, and key ring | Container persistence checks pass; hosted CI pending |
-| Same-origin deployment routes API errors correctly, supports SPA deep links, and applies cache/security headers | Catalogue request/route and health unit cases above | `scripts/check-deployment.py`: HTTP assertions through Nginx; `foundation.spec.ts`: desktop/mobile navigation, keyboard skip link, overflow and axe checks; `FoundationFunctionalTests.cs`: development-only OpenAPI | Deployment checks pass; browser results below; hosted CI pending |
+| People icon replaces all star marks; wordmark reads "Mingle" with the tagline "Team games"; headings contain no full stops | `web/src/app/App.test.tsx`: brand name/tagline, decorative icon semantics, punctuation on home/how-to/not-found/detail and error headings | `web/e2e/foundation.spec.ts`: loaded icons, exact brand/tagline and Mingle browser titles, punctuation across routes and error state, both viewports, axe and keyboard checks | 27 frontend unit tests and 20 browser cases pass locally; build/lint/format pass; screenshots reviewed; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| All five catalogue entries have valid metadata; exact IDs resolve and unknown IDs fail | `tests/TeamGames.Core.Tests/GameCatalogTests.cs`: metadata, uniqueness, exact/unknown IDs; `web/src/api/games.test.ts`: malformed/duplicate payloads and request failures | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: catalogue and every detail through HTTP; `web/e2e/foundation.spec.ts`: all five detail flows | Local .NET and frontend suites pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Home, detail, how-to, and not-found routes render and allow navigation; gameplay availability is clear | `web/src/app/App.test.tsx`: each detail route, navigation, instructions, recovery links, room hosting and future-gameplay explanation | `web/e2e/foundation.spec.ts`: each route through the real backend, direct loads and reloads, desktop/mobile | Browser results recorded below; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Loading is announced; an API failure offers retry and recovers | `web/src/app/App.test.tsx`: pending request, cancellation, error/retry on home and detail; `web/src/api/games.test.ts`: rejected/invalid responses | `web/e2e/foundation.spec.ts`: delayed real request and real API stop/restart/retry in both viewports | Browser results recorded below; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Storage paths are validated; fresh SQLite is migrated; readiness reflects storage while liveness remains independent | `tests/TeamGames.Core.Tests/StoragePathsTests.cs`: relative/absolute/invalid paths; `tests/TeamGames.Api.Tests/StorageHealthCheckTests.cs`: success, failure, sanitized exceptions, cancellation | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: migration, dropped storage table, invalid/unwritable configuration | Local .NET suites pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Database identity and Data Protection keys survive host/container recreation | Storage path and readiness unit cases above cover persistence configuration and failure reporting | `FoundationFunctionalTests.cs`: fresh host restores installation and decrypts a protected value; `scripts/verify-compose.sh`: recreates API and compares database, migrations, WAL mode, and key ring | Container persistence checks pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Same-origin deployment routes API errors correctly, supports SPA deep links, and applies cache/security headers | Catalogue request/route and health unit cases above | `scripts/check-deployment.py`: HTTP assertions through Nginx; `foundation.spec.ts`: desktop/mobile navigation, keyboard skip link, overflow and axe checks; `FoundationFunctionalTests.cs`: development-only OpenAPI | Deployment checks pass; browser results below; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
 
 ## M0 — Buildable foundation
 
-**Status:** All implementation items below are present. Checkboxes remain pending
-until local verification and the required hosted CI run both pass. The GitHub
-Actions workflow runs both verification scripts and uploads browser artifacts;
-the repository owner must connect a GitHub remote and require its **Unit and
-functional tests** check before this milestone can be marked complete.
+**Status: Complete.** Implementation and acceptance checks pass locally and in
+[hosted CI](https://github.com/Costa365/mingle/actions/runs/40099054327). The workflow
+runs both verification scripts and retains build, deployment, and browser results.
 
-- [ ] Create the .NET 10 solution, API/Core/Infrastructure projects, and test
+- [x] Create the .NET 10 solution, API/Core/Infrastructure projects, and test
   projects; enable nullable references and consistent formatting.
-- [ ] Scaffold React/TypeScript/Vite with routing, strict types, linting, component
+- [x] Scaffold React/TypeScript/Vite with routing, strict types, linting, component
   testing, and a Playwright setup.
-- [ ] Pin compatible SDK/runtime/package versions and commit lockfiles. Add
+- [x] Pin compatible SDK/runtime/package versions and commit lockfiles. Add
   `.gitignore`, `.editorconfig`, `.env.example`, and documented configuration.
-- [ ] Add frontend/API Docker builds, Nginx routing, Compose volumes and health
+- [x] Add frontend/API Docker builds, Nginx routing, Compose volumes and health
   checks. Add EF Core SQLite, the first migration, and key persistence.
-- [ ] Establish an initial app shell, error/loading components, and design tokens
+- [x] Establish an initial app shell, error/loading components, and design tokens
   usable at 360px and desktop widths.
-- [ ] Add meaningful unit and functional coverage for initial app-shell behavior,
+- [x] Add meaningful unit and functional coverage for initial app-shell behavior,
   configuration validation, readiness, routing, and persistence initialization.
-- [ ] Add required CI jobs for unit, API/hub functional, and browser functional
+- [x] Add required CI jobs for unit, API/hub functional, and browser functional
   suites; document verified local commands and test evidence.
 
 **Acceptance:** A fresh checkout can install dependencies, build both applications,
@@ -78,37 +76,37 @@ recreation. No placeholder test is counted as evidence of gameplay.
 
 Depends on M0.
 
-**Status:** All items below are implemented and locally verified. Checkboxes remain
-pending the required hosted CI run, consistent with the definition of done.
-`bash scripts/verify.sh` passes **47 backend unit tests, 16 API/hub functional tests,
+**Status: Complete.** Implementation and acceptance checks pass locally and in
+[hosted CI](https://github.com/Costa365/mingle/actions/runs/40099054327).
+`bash scripts/verify.sh` passes **4 verifier unit tests, 47 backend unit tests, 16 API/hub functional tests,
 and 65 frontend unit/component tests** plus build, type checking, lint, formatting,
 generated-contract drift checking, and Compose validation. The final isolated
 `bash scripts/verify-compose.sh` passes deployment/persistence assertions and all
-**30 browser cases** through Nginx on desktop and 360px mobile (1.2 minutes for the
+**30 browser cases** through Nginx on desktop and 360px mobile (1.0 minute for the hosted
 browser suite). No required tests were skipped.
 
 | Feature / acceptance criteria | Unit coverage | Functional coverage | Evidence / remaining gate |
 | --- | --- | --- | --- |
-| Protected guest identity; validated names/codes; case-insensitive uniqueness, capacity, and entry limits | `RoomRulesTests.cs`: names, Unicode normalization, codes, capacity, lock/rejoin/removal; `RoomBoundaryTests.cs`: same-origin and upgrade checks; `RoomPages.test.tsx`: both entry forms, server errors and safe retry | `RoomFunctionalTests.cs`: real cookies/antiforgery for every mutation, forged/expired sessions, HTTPS Secure cookies, input/capacity/rate limits, duplicate create/join; `rooms.spec.ts`: create, invite join, duplicate-name error, reload and duplicate tab | Both layers pass locally; hosted CI pending |
-| Invite link/code copying, roster, facilitator controls, closure confirmation, and room isolation | `RoomRulesTests.cs`: every control's permission/target/version rules; `RoomPages.test.tsx`: lock/unlock/remove/transfer, copy/failure, confirmation/cancel, role-specific controls and terminal views | `RoomFunctionalTests.cs`: unauthorized controls/read, stale versions, ownership changes, removed access, closed room behavior; `rooms.spec.ts`: both clipboard actions, lock/unlock, removal, transfer, closed-room fanout, cross-room access, keyboard Escape/focus restoration | Both layers pass; desktop/mobile screenshots reviewed and axe checks pass; hosted CI pending |
-| Authorized live subscription and unique-person presence across tabs | `RoomBoundaryTests.cs`: tab counts, stale disconnect and timed grace; `rooms.test.ts`: snapshot validation and ordering | `RoomFunctionalTests.cs`: real SignalR Long Polling, rejected outsider subscription, live roster, tab count, removal revocation and rejected closed subscription; browser tests verify independent live participants and duplicate tabs | Both layers pass locally; hosted CI pending |
-| Transactions persist before notification; UUID retries deduplicate and reject payload reuse | `RoomRulesTests.cs`: monotonic versions/conflicts; `RoomPages.test.tsx` and `rooms.test.ts`: stable retry UUIDs and antiforgery refresh | `RoomFunctionalTests.cs`: concurrent duplicate commands, payload mismatch, role/membership rechecks and retained receipts after restart; `rooms.spec.ts`: lost create acknowledgment, reload, retry; lost control acknowledgment changes version once | Both layers pass locally; hosted CI pending |
-| Initial retry, reconnect/resubscribe/resync, manual recovery, stale-view rejection, and periodic reconciliation | `useRoom.test.tsx`: handler registration, initial retry, reconnect, out-of-order state, periodic polling, disposal, expiry and terminal closure; `rooms.test.ts`: independent presence epoch/version ordering; `RoomPages.test.tsx`: recovery controls | `RoomFunctionalTests.cs`: complete host restart preserves cookies, ownership and receipts; `rooms.spec.ts`: real API outage disables controls, restart reconnects both browsers with unchanged membership/ownership/version | Both layers pass locally and through Compose; hosted CI pending |
-| Expiry and retained-data cleanup revoke live access and delete dependent data; migration preserves existing installation | `RoomRulesTests.cs`: exact inactivity boundary and closure; `RoomBoundaryTests.cs`: timed presence grace; hook/lobby tests: access-ended view | `RoomFunctionalTests.cs`: fake-time HTTP/hub expiry, guest expiry, cascade removal of rooms/memberships/receipts, upgrade from M0 SQLite schema; browser removal exercises the access-ended UI | Both layers pass locally; hosted CI pending |
-| Explicit HTTP/hub DTOs match client types; credentials remain private | `rooms.test.ts`: valid/malformed protocol and snapshots; generated DTO drift check in `verify.sh` | Real API/hub serialization asserts no guest IDs, verifiers or receipts in views; all browser flows consume actual generated/validated snapshots through the API | Both layers and contract check pass; hosted CI pending |
-| Invitation codes, referrers, and transport tokens stay out of proxy diagnostics | `logs.test.ts`: redaction of invite, hub, and referrer queries in development diagnostics | `check-deployment.py` sends query/referrer canaries; `verify-compose.sh` scans actual Nginx logs after all browser/outage flows for canaries and hub-token URLs | Both layers and the real proxy-log scan pass; hosted CI pending |
+| Protected guest identity; validated names/codes; case-insensitive uniqueness, capacity, and entry limits | `RoomRulesTests.cs`: names, Unicode normalization, codes, capacity, lock/rejoin/removal; `RoomBoundaryTests.cs`: same-origin and upgrade checks; `RoomPages.test.tsx`: both entry forms, server errors and safe retry | `RoomFunctionalTests.cs`: real cookies/antiforgery for every mutation, forged/expired sessions, HTTPS Secure cookies, input/capacity/rate limits, duplicate create/join; `rooms.spec.ts`: create, invite join, duplicate-name error, reload and duplicate tab | Both layers pass locally; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Invite link/code copying, roster, facilitator controls, closure confirmation, and room isolation | `RoomRulesTests.cs`: every control's permission/target/version rules; `RoomPages.test.tsx`: lock/unlock/remove/transfer, copy/failure, confirmation/cancel, role-specific controls and terminal views | `RoomFunctionalTests.cs`: unauthorized controls/read, stale versions, ownership changes, removed access, closed room behavior; `rooms.spec.ts`: both clipboard actions, lock/unlock, removal, transfer, closed-room fanout, cross-room access, keyboard Escape/focus restoration | Both layers pass; desktop/mobile screenshots reviewed and axe checks pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Authorized live subscription and unique-person presence across tabs | `RoomBoundaryTests.cs`: tab counts, stale disconnect and timed grace; `rooms.test.ts`: snapshot validation and ordering | `RoomFunctionalTests.cs`: real SignalR Long Polling, rejected outsider subscription, live roster, tab count, removal revocation and rejected closed subscription; browser tests verify independent live participants and duplicate tabs | Both layers pass locally; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Transactions persist before notification; UUID retries deduplicate and reject payload reuse | `RoomRulesTests.cs`: monotonic versions/conflicts; `RoomPages.test.tsx` and `rooms.test.ts`: stable retry UUIDs and antiforgery refresh | `RoomFunctionalTests.cs`: concurrent duplicate commands, payload mismatch, role/membership rechecks and retained receipts after restart; `rooms.spec.ts`: lost create acknowledgment, reload, retry; lost control acknowledgment changes version once | Both layers pass locally; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Initial retry, reconnect/resubscribe/resync, manual recovery, stale-view rejection, and periodic reconciliation | `useRoom.test.tsx`: handler registration, initial retry, reconnect, out-of-order state, periodic polling, disposal, expiry and terminal closure; `rooms.test.ts`: independent presence epoch/version ordering; `RoomPages.test.tsx`: recovery controls | `RoomFunctionalTests.cs`: complete host restart preserves cookies, ownership and receipts; `rooms.spec.ts`: real API outage disables controls, restart reconnects both browsers with unchanged membership/ownership/version | Both layers pass locally and through Compose; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Expiry and retained-data cleanup revoke live access and delete dependent data; migration preserves existing installation | `RoomRulesTests.cs`: exact inactivity boundary and closure; `RoomBoundaryTests.cs`: timed presence grace; hook/lobby tests: access-ended view | `RoomFunctionalTests.cs`: fake-time HTTP/hub expiry, guest expiry, cascade removal of rooms/memberships/receipts, upgrade from M0 SQLite schema; browser removal exercises the access-ended UI | Both layers pass locally; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Explicit HTTP/hub DTOs match client types; credentials remain private | `rooms.test.ts`: valid/malformed protocol and snapshots; generated DTO drift check in `verify.sh` | Real API/hub serialization asserts no guest IDs, verifiers or receipts in views; all browser flows consume actual generated/validated snapshots through the API | Both layers and contract check pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
+| Invitation codes, referrers, and transport tokens stay out of proxy diagnostics | `logs.test.ts`: redaction of invite, hub, and referrer queries in development diagnostics | `check-deployment.py` sends query/referrer canaries; `verify-compose.sh` scans actual Nginx logs after all browser/outage flows for canaries and hub-token URLs | Both layers and the real proxy-log scan pass; [hosted CI passed](https://github.com/Costa365/mingle/actions/runs/40099054327) |
 
-- [ ] Implement guest credentials, antiforgery handling, memberships, facilitator
+- [x] Implement guest credentials, antiforgery handling, memberships, facilitator
   assignment, and room creation/joining with input limits and rate limits.
-- [ ] Build create/join/lobby screens, invite link/code copying, participant list,
+- [x] Build create/join/lobby screens, invite link/code copying, participant list,
   join locking, player removal, ownership transfer, and room closure.
-- [ ] Add authorized hub subscriptions, per-viewer snapshots, monotonically
+- [x] Add authorized hub subscriptions, per-viewer snapshots, monotonically
   increasing versions, presence, and duplicate-tab handling.
-- [ ] Add command receipts and transactional room mutations from the start.
-- [ ] Implement initial connection retry, reconnect/resubscribe/snapshot recovery,
+- [x] Add command receipts and transactional room mutations from the start.
+- [x] Implement initial connection retry, reconnect/resubscribe/snapshot recovery,
   stale-version rejection, periodic reconciliation, and recovery UI.
-- [ ] Implement room expiry and retained-data cleanup.
-- [ ] Add unit and functional tests for every room/identity/control/recovery
+- [x] Implement room expiry and retained-data cleanup.
+- [x] Add unit and functional tests for every room/identity/control/recovery
   feature above, including independent browser flows for each UI action.
 
 **Acceptance:** Independent browsers join the same room and see live roster changes.
@@ -243,6 +241,15 @@ test or acceptance failure prevents release completion and is recorded explicitl
 
 ## Progress and evidence
 
+- 2026-10-24: **M0 and M1 hosted CI gates passed** in
+  [run 40099054327](https://github.com/Costa365/mingle/actions/runs/40099054327)
+  for commit `bc5e96d`. All workflow steps succeeded: **4 verifier unit tests,
+  47 backend unit tests, 16 API/hub functional tests, 65 frontend unit/component
+  tests, and 30 browser cases** through Docker/Nginx. Build, formatting, lint,
+  generated-contract checking, migration/key persistence, and proxy-log privacy
+  checks passed. The `verification-results` artifact was uploaded successfully.
+  Checked all 14 implemented M0/M1 checklist items; M2–M6 remain unchecked.
+
 - 2026-10-24: Connected `https://github.com/Costa365/mingle`. The
   [first hosted run](https://github.com/Costa365/mingle/actions/runs/40097369421)
   passed build/unit/API checks and container persistence, then failed because the
@@ -251,7 +258,7 @@ test or acceptance failure prevents release completion and is recorded explicitl
   older Compose behavior, retained failure diagnostics, original exit status, and
   teardown failure. Updated official Actions to pinned Node 24 releases, enabled
   manual dispatch, and retained verification logs/reports as artifacts. Hosted
-  completion remains pending a successful run of this fix.
+  completion is confirmed by the successful run recorded above.
 
 - 2026-10-24: Implemented M1 rooms, guest credentials, facilitator controls,
   authenticated SignalR subscriptions, transient presence, durable receipts,
@@ -270,7 +277,8 @@ test or acceptance failure prevents release completion and is recorded explicitl
   expose transport-token URLs. Development proxy diagnostics redact queries too.
 - The existing local preview was upgraded after stopping the API and backing up
   its complete data directory outside the repository. Both containers are healthy.
-- Hosted CI remains unexecuted because no Git remote is configured. The supplied
+- At the initial M1 checkpoint, no Git remote or hosted run existed; this gate is
+  now closed by the successful run above. The supplied
   Compose profile remains local HTTP; public TLS/forwarded-proxy configuration and
   provider rehearsal remain deployment work for M6. Gameplay remains M2–M4.
 
@@ -307,9 +315,9 @@ test or acceptance failure prevents release completion and is recorded explicitl
 - A functional test exposed early storage-configuration resolution before the
   test host's configuration override. Resolution now occurs through DI using final
   configuration; invalid-path, distinct temporary database, and restart tests pass.
-- Hosted CI has **not run**: `git remote -v` is empty. M0 remains pending that gate.
-  No rooms, authentication, hubs, game rules, prompt management, or administration
-  are claimed as implemented or tested. Next implementation milestone is M1.
+- At the initial M0 checkpoint, no remote or hosted run existed and room features
+  had not yet been implemented. Later M1 and CI entries above supersede that
+  checkpoint; M2 is now the next milestone.
 
 - Branding refinement: replaced all three star marks with a shared local people
   SVG; capitalized the wordmark; removed full stops from headings, eyebrow labels,
@@ -325,7 +333,8 @@ test or acceptance failure prevents release completion and is recorded explicitl
   regression tests. Final verification: 27 frontend unit/component tests and all
   20 desktop/mobile browser cases passed, including axe checks (32.9 seconds).
   Build, type checking, lint, and formatting passed. The local Docker frontend was
-  rebuilt and became healthy. Hosted CI remains pending.
+  rebuilt and became healthy. Hosted CI was pending at that branding checkpoint
+  and is now verified by the later run recorded above.
 
 | Date | Decision | Rationale / revisit condition |
 | --- | --- | --- |

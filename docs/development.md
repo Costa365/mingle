@@ -131,6 +131,8 @@ mask the original test failure. Cleanup failure also fails an otherwise green ru
 
 Use **Unit and functional tests** as the required check for `main`. Hosted CI
 results and milestone closure evidence are recorded in the implementation plan.
+For subsequent changes, push a feature branch first so CI can verify the commit
+before it reaches protected `main`.
 The verifier uses `compose up --wait --no-recreate` to resume the API because the
 hosted Compose version does not support `compose start --wait`.
 

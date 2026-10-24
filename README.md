@@ -2,6 +2,8 @@
 
 **Team games**
 
+[![Verify](https://github.com/Costa365/mingle/actions/workflows/ci.yml/badge.svg)](https://github.com/Costa365/mingle/actions/workflows/ci.yml)
+
 An account-free web application for remote teams to play facilitated games:
 
 - Two Truths and a Lie
@@ -25,7 +27,7 @@ and ownership. Room changes and retry receipts persist in SQLite.
 The five-game catalogue remains available. **Playable games, prompt management,
 and administration are not implemented yet**; This or That is next. Unit, API/hub
 functional, and desktop/mobile browser tests run in the CI workflow. See the
-implementation plan for verification results and the pending hosted CI gate.
+implementation plan for verification results. M0 and M1 have passed hosted CI.
 
 ## Run locally with Docker
 

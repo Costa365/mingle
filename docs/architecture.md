@@ -4,7 +4,7 @@ Status: foundation and M1 room lifecycle implemented by 2026-10-24. The catalogu
 guest identity, create/join/lobby, facilitator controls, authorized SignalR
 subscriptions, durable command receipts, expiry, and reconnect recovery exist.
 Game sessions, rounds, prompts, and administration below describe future milestones.
-See the implementation plan for test evidence and the pending hosted CI gate.
+M0 and M1 have passing hosted CI evidence linked in the implementation plan.
 
 ## Components and decisions
 
