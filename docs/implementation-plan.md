@@ -9,7 +9,7 @@ and recovery foundation** are implemented and locally verified. Teams can create
 and join rooms, manage a live lobby, and recover membership after reload or API
 restart. **M0 and M1 are complete**, including their hosted CI acceptance gates.
 The [successful GitHub run](https://github.com/Costa365/mingle/actions/runs/40099054327)
-verified commit `bc5e96d`. M2–M6 remain unimplemented; playable games start with M2.
+verified commit `bc5e96d`. M2 implementation is in verification; M3–M6 remain unimplemented.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -134,6 +134,44 @@ The facilitator advances with absent or disconnected players, including zero
 answers. Double-clicks/retries cannot advance twice. Simultaneous valid player
 answers succeed. A stale answer after reveal fails clearly. Choices stay private
 until reveal. API restart restores the exact last acknowledged stage and answers.
+
+
+### M2 implementation and verification — 2026-10-24
+
+This or That is implemented with 12 reviewed seed pairs and a server module
+registry. Required local and hosted verification gates are in progress; the M2
+checkboxes remain open until both pass.
+
+| Feature and acceptance | Unit coverage | Functional coverage |
+| --- | --- | --- |
+| Start a game; freeze the round roster; late joins wait for the next round | `GameRulesTests`, `GamePanel.test.tsx` | `GameFunctionalTests`, `game.spec.ts` late arrival |
+| Choose A/B/pass and change before reveal; concurrent people succeed and duplicate tabs conflict | `GameRulesTests` response and revision cases; `GamePanel.test.tsx` choice cases | Three-player API/hub and browser flows |
+| Reveal, skip, next, finish and return; allow zero, missing and disconnected answers | `GameRulesTests` stage/zero-response/exhaustion cases; game component controls/results | API multi-round flow and desktop/mobile gameplay flow |
+| Keep others' choices private; removal before reveal excludes them; finalized aggregates remain unchanged | `GameRulesTests` projection and removal cases | Per-viewer real hub snapshots, cross-room access, removal before/after reveal |
+| Authorize every action; reject stale stage/session/round and invalid input; deduplicate after commit | `GameRulesTests` invalid and permission cases; UI stale/ambiguous error cases | Cookie/CSRF/origin tests, duplicate/concurrent command tests, browser lost acknowledgement |
+| Preserve state, answers, results and receipts across process restart; expire playing rooms | `GameRulesTests` lifecycle case; existing storage and room tests | API restart through SQLite, real browser API stop/start, expiry and purge |
+| Usable mobile/keyboard UI, reduced motion and accessible controls | Game/room component tests, transport validation tests | Desktop and 360px browser flows with axe, Enter-key reveal, overflow checks and screenshots |
+
+M2 decisions:
+- Gameplay uses the same authenticated, CSRF-protected HTTP command path and
+  post-commit per-viewer hub publisher as room controls. Separate stage and own
+  response revisions avoid rejecting another player's concurrent answer.
+- A versioned JSON document in `Rooms.GameState` stores sessions, round prompt
+  text, frozen rosters, private submissions, and finalized aggregate results.
+  Starting another game preserves previous sessions in that document. The third
+  EF migration adds a nullable column so existing M1 rooms remain usable.
+- The public room protocol remains version 1 with an additive optional `game`
+  view. Browser module registration selects the renderer; storage, hub, and
+  reconnect handling do not inspect game IDs. Future module schema changes must
+  migrate stored state explicitly before changing seed identifiers or shape.
+- Skipping or finishing an open round records it as skipped without revealing
+  submitted choices. Percentages exclude passes and missing answers; zero votes
+  produces zero percentages. Results remain aggregate, including after reveal.
+- The seed deck does not repeat within a session. After its 12 rounds, finishing
+  remains available; prompt browsing, reset, custom content, and launch content
+  remain M3. No leaderboard is added.
+- Browser accessibility checks found a roster transfer button label mismatch;
+  visible and accessible labels now match, with component and browser coverage.
 
 ## M3 — Prompt browsing, authoring, and launch content
 

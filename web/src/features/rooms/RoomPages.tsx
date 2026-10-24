@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { commandRoom, enterRoom, RoomError } from '../../api/rooms'
 import type { EntryRequest, RoomCommand } from '../../api/rooms'
+import { GamePanel } from './GamePanel'
 import { useRoom } from '../../realtime/useRoom'
 
 export function RoomEntry({ create }: { create: boolean }) {
@@ -238,6 +239,12 @@ export function RoomLobby() {
         </div>
       )}
       {room.error && synchronized && <p role="alert">{room.error}</p>}
+      <GamePanel
+        snapshot={snapshot}
+        disabled={blocked}
+        accept={room.accept}
+        refresh={room.refresh}
+      />
       <div className="lobby-grid">
         <section className="lobby-roster" aria-labelledby="roster-heading">
           <h2 id="roster-heading">
@@ -279,7 +286,7 @@ export function RoomLobby() {
                         }}
                         aria-label={`Make ${participant.name} facilitator`}
                       >
-                        Make facilitator
+                        Make {participant.name} facilitator
                       </button>
                     )}
                     {can('remove') && (
@@ -362,8 +369,8 @@ export function RoomLobby() {
       )}
       <div className="lobby-next">
         <div>
-          <h2>Your room is ready</h2>
-          <p>Invite your teammates and settle in. Playable games are coming soon.</p>
+          <h2>Make yourself at home</h2>
+          <p>Invite your teammates and settle in. Your facilitator sets the pace.</p>
         </div>
         {can('close') && (
           <button

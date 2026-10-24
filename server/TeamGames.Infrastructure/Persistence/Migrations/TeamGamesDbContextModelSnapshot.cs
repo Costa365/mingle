@@ -68,6 +68,9 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FacilitatorId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("GameState")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("JoinLocked")
                         .HasColumnType("INTEGER");
 

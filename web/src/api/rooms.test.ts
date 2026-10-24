@@ -54,3 +54,37 @@ describe('room transport and ordering', () => {
     expect(fetchMock.mock.calls[5][1].headers['X-CSRF-TOKEN']).toBe('guest-new')
   })
 })
+
+describe('game snapshot boundary', () => {
+  const game = {
+    sessionId: '50000000-0000-0000-0000-000000000001',
+    gameId: 'this-or-that',
+    roundId: '50000000-0000-0000-0000-000000000002',
+    roundNumber: 1,
+    stageRevision: 1,
+    stage: 'responding',
+    prompt: 'Choose',
+    optionA: 'Tea',
+    optionB: 'Coffee',
+    eligibleCount: 2,
+    responseCount: 0,
+    eligible: true,
+    ownChoice: null,
+    responseRevision: 0,
+    allowedActions: ['answer'],
+    results: [],
+  }
+  it('accepts a private game view and rejects missing or malformed state', () => {
+    expect(parseSnapshot({ ...room, status: 'playing', game }).game).toEqual(game)
+    for (const invalid of [
+      undefined,
+      { ...game, stage: 'unknown' },
+      { ...game, ownChoice: 'secret' },
+      { ...game, responseCount: 3 },
+      { ...game, allowedActions: ['admin'] },
+      { ...game, results: [null] },
+      { ...game, sessionId: 'bad' },
+    ])
+      expect(() => parseSnapshot({ ...room, status: 'playing', game: invalid })).toThrow()
+  })
+})

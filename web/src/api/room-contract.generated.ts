@@ -1,5 +1,51 @@
 // Generated from TeamGames.Core room DTOs. Run the contracts tool to update.
 
+export interface GameCommand {
+  commandId: string
+  action: string
+  sessionId?: string | null
+  roundId?: string | null
+  stageRevision?: number
+  responseRevision?: number
+  choice?: string | null
+  gameId?: string | null
+  expectedVersion?: number
+}
+
+export interface RoundResult {
+  roundId: string
+  number: number
+  prompt: string
+  optionA: string
+  optionB: string
+  skipped: boolean
+  a: number
+  b: number
+  passes: number
+  missing: number
+  percentA: number
+  percentB: number
+}
+
+export interface GameView {
+  sessionId: string
+  gameId: string
+  roundId: string
+  roundNumber: number
+  stageRevision: number
+  stage: string
+  prompt: string
+  optionA: string
+  optionB: string
+  eligibleCount: number
+  responseCount: number
+  eligible: boolean
+  ownChoice: string | null
+  responseRevision: number
+  allowedActions: string[]
+  results: RoundResult[]
+}
+
 export interface ParticipantView {
   id: string
   name: string
@@ -21,6 +67,7 @@ export interface RoomSnapshot {
   facilitatorId: string
   participants: ParticipantView[]
   allowedActions: string[]
+  game?: GameView | null
 }
 
 export interface EntryRequest {

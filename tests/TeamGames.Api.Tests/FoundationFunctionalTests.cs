@@ -39,7 +39,7 @@ public sealed class FoundationFunctionalTests : IDisposable
         using (var scope = factory.Services.CreateScope())
         {
             var database = scope.ServiceProvider.GetRequiredService<TeamGamesDbContext>();
-            Assert.Equal(2, (await database.Database.GetAppliedMigrationsAsync()).Count());
+            Assert.Equal(3, (await database.Database.GetAppliedMigrationsAsync()).Count());
             await database.Database.ExecuteSqlRawAsync("DROP TABLE Installations;");
         }
         var failed = await client.GetAsync("/api/health/ready");

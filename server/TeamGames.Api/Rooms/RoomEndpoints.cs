@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Games;
 using TeamGames.Infrastructure.Persistence;
 using TeamGames.Infrastructure.Rooms;
 
@@ -22,6 +23,9 @@ public static class RoomEndpoints
                 throw new InvalidOperationException("Invalid room settings");
             return settings;
         });
+        builder.Services.AddSingleton<IGameRandom, GameRandom>();
+        builder.Services.AddSingleton<IGameModule, ThisOrThat>();
+        builder.Services.AddSingleton<GameModules>();
         builder.Services.AddSingleton<RoomWriter>();
         builder.Services.AddSingleton<PresenceRegistry>();
         builder.Services.AddScoped<RoomStore>();
@@ -129,6 +133,12 @@ public static class RoomEndpoints
         app.MapPost("/api/rooms/{id:guid}/commands", async (Guid id, RoomCommand command, HttpContext context, RoomStore store, RoomPublisher publisher) =>
         {
             var result = await store.ExecuteAsync(id, GuestAuthentication.GuestId(context.User), command);
+            await publisher.PublishAsync(id);
+            return Results.Ok(result);
+        }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();
+        app.MapPost("/api/rooms/{id:guid}/game", async (Guid id, GameCommand command, HttpContext context, RoomStore store, RoomPublisher publisher) =>
+        {
+            var result = await store.PlayAsync(id, GuestAuthentication.GuestId(context.User), command);
             await publisher.PublishAsync(id);
             return Results.Ok(result);
         }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();

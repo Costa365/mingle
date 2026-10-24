@@ -14,7 +14,7 @@ public sealed class RoomHub(RoomStore store, PresenceRegistry presence, RoomPubl
         {
             var guestId = GuestAuthentication.GuestId(Context.User!);
             var snapshot = await store.GetAsync(roomId, guestId);
-            if (snapshot.Status != "lobby") throw new RoomException("room_closed", "This room is closed", 410);
+            if (snapshot.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
             var previousRoom = presence.Disconnect(Context.ConnectionId);
             presence.Subscribe(new(Context.ConnectionId, roomId, guestId, snapshot.YouId, Context.Abort));
             if (previousRoom is { } previous && previous != roomId) await publisher.PublishAsync(previous);

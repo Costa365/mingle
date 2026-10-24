@@ -1,4 +1,5 @@
 using System.Text;
+using TeamGames.Core.Games;
 
 namespace TeamGames.Core.Rooms;
 
@@ -9,6 +10,7 @@ public sealed class Room
     public long Version { get; set; } = 1;
     public bool JoinLocked { get; set; }
     public string Status { get; set; } = "lobby";
+    public string? GameState { get; set; }
     public Guid FacilitatorId { get; set; }
     public long LastActivityTicks { get; set; }
     public long? ClosedTicks { get; set; }
@@ -44,7 +46,7 @@ public sealed record RoomCommand(Guid CommandId, long ExpectedVersion, string Ac
 public sealed record ParticipantView(Guid Id, string Name, bool IsFacilitator, bool IsOnline);
 public sealed record RoomSnapshot(int ProtocolVersion, Guid Id, string Code, long Version, long PresenceRevision, string PresenceEpoch,
     string Status, bool JoinLocked, int Capacity, Guid YouId, Guid FacilitatorId,
-    IReadOnlyList<ParticipantView> Participants, IReadOnlyList<string> AllowedActions);
+    IReadOnlyList<ParticipantView> Participants, IReadOnlyList<string> AllowedActions, GameView? Game = null);
 public sealed record CommandResult(RoomSnapshot Snapshot, long AppliedVersion, bool Replayed);
 public sealed record SessionView(string RequestToken);
 public sealed record RoomErrorView(string Code, string Message);
@@ -74,14 +76,14 @@ public static class RoomRules
         ?? throw new RoomException("membership_revoked", "You do not have access to this room", 403);
 
     public static bool IsExpired(Room room, long now, RoomSettings settings) =>
-        room.Status == "expired" || (room.Status == "lobby" && now - room.LastActivityTicks >= TimeSpan.FromHours(settings.IdleHours).Ticks);
+        room.Status == "expired" || ((room.Status is "lobby" or "playing") && now - room.LastActivityTicks >= TimeSpan.FromHours(settings.IdleHours).Ticks);
 
     public static Membership Join(Room room, Guid guestId, string name, int capacity)
     {
         var existing = room.Members.FirstOrDefault(m => m.GuestId == guestId);
         if (existing?.Removed == true) throw new RoomException("membership_revoked", "You were removed from this room", 403);
         if (existing is not null) return existing;
-        if (room.Status != "lobby") throw new RoomException("room_closed", "This room is closed", 410);
+        if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
         if (room.JoinLocked) throw new RoomException("room_locked", "The facilitator has locked joining", 409);
         if (room.Members.Count(m => !m.Removed) >= capacity) throw new RoomException("room_full", "This room is full", 409);
         var normalized = NormalizeName(name);
@@ -94,7 +96,7 @@ public static class RoomRules
 
     public static void Apply(Room room, Membership actor, RoomCommand command, long now)
     {
-        if (room.Status != "lobby") throw new RoomException("room_closed", "This room is closed", 410);
+        if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
         if (actor.Id != room.FacilitatorId) throw new RoomException("facilitator_required", "Only the facilitator can do that", 403);
         if (command.ExpectedVersion != room.Version) throw new RoomException("version_changed", "The room changed; review it and try again", 409);
         switch (command.Action)
@@ -122,5 +124,5 @@ public static class RoomRules
     }
 
     public static IReadOnlyList<string> Actions(Room room, Membership member) =>
-        room.Status == "lobby" && member.Id == room.FacilitatorId ? ["lock", "remove", "transfer", "close"] : [];
+        (room.Status is "lobby" or "playing") && member.Id == room.FacilitatorId ? ["lock", "remove", "transfer", "close"] : [];
 }

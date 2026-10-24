@@ -24,10 +24,15 @@ live roster. Facilitators can lock joining, remove players, transfer ownership,
 and close the room. Reloads, duplicate tabs, and API restarts preserve membership
 and ownership. Room changes and retry receipts persist in SQLite.
 
-The five-game catalogue remains available. **Playable games, prompt management,
-and administration are not implemented yet**; This or That is next. Unit, API/hub
-functional, and desktop/mobile browser tests run in the CI workflow. See the
-implementation plan for verification results. M0 and M1 have passed hosted CI.
+**M2 — This or That** now has a playable flow: choose either option or pass,
+change your answer before reveal, compare totals, and continue, skip, or finish.
+Facilitators can advance with missing or disconnected players. Private answers,
+stages, finalized results, and retry receipts survive API restarts. The starter
+deck contains 12 reviewed pairs; larger prompt libraries and authoring are M3.
+
+The other four games and administration remain planned. Unit, API/hub functional,
+and desktop/mobile browser tests run in CI. M2 verification is in progress; see
+the implementation plan for the current acceptance evidence.
 
 ## Run locally with Docker
 
@@ -58,8 +63,8 @@ For frontend/API development without Docker, follow the
 
 ## Next implementation target
 
-Deliver a complete **This or That** game using the room and recovery foundation
-before expanding to the remaining games. The first release includes
+Build **M3 — Prompt browsing, authoring, and launch content** on the playable
+This or That flow before expanding to the remaining games. The first release includes
 all five games, prompt management, administrator controls, and deployment docs.
 
 See the [implementation plan](docs/implementation-plan.md) for the full sequence.

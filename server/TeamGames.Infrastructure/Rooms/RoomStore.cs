@@ -3,12 +3,13 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Games;
 using TeamGames.Infrastructure.Persistence;
 
 namespace TeamGames.Infrastructure.Rooms;
 
 public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, RoomSettings settings,
-    TimeProvider time, PresenceRegistry presence)
+    TimeProvider time, PresenceRegistry presence, GameModules games)
 {
     private long Now => time.GetUtcNow().Ticks;
     private static string Fingerprint(string operation, object payload) =>
@@ -39,7 +40,7 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
             viewer.Id, room.FacilitatorId,
             room.Members.Where(m => !m.Removed).OrderBy(m => m.Name, StringComparer.Ordinal)
                 .Select(m => new ParticipantView(m.Id, m.Name, m.Id == room.FacilitatorId, online.Online.Contains(m.Id))).ToArray(),
-            RoomRules.Actions(room, viewer));
+            RoomRules.Actions(room, viewer), games.Project(room, viewer));
     }
 
     private async Task<CommandReceipt?> Receipt(Guid guestId, Guid commandId, string fingerprint)
@@ -125,9 +126,15 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
         return new(await GetAsync(roomId, guestId), version, replayed);
     }
 
-    public async Task<CommandResult> ExecuteAsync(Guid roomId, Guid guestId, RoomCommand command)
+    public Task<CommandResult> ExecuteAsync(Guid roomId, Guid guestId, RoomCommand command) =>
+        Execute(roomId, guestId, command.CommandId, command, (room, actor) => RoomRules.Apply(room, actor, command, Now));
+
+    public Task<CommandResult> PlayAsync(Guid roomId, Guid guestId, GameCommand command) =>
+        Execute(roomId, guestId, command.CommandId, command, (room, actor) => games.Apply(room, actor, command, Now));
+
+    private async Task<CommandResult> Execute(Guid roomId, Guid guestId, Guid commandId, object command, Action<Room, Membership> apply)
     {
-        ValidateId(command.CommandId);
+        ValidateId(commandId);
         long version;
         bool replayed;
         await writer.Gate.WaitAsync();
@@ -138,13 +145,13 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
                 ?? throw new RoomException("room_missing", "That room was not found", 404);
             var actor = Access(room, guestId);
             var fingerprint = Fingerprint(roomId.ToString(), command);
-            var receipt = await Receipt(guestId, command.CommandId, fingerprint);
+            var receipt = await Receipt(guestId, commandId, fingerprint);
             replayed = receipt is not null;
             if (receipt is not null) version = receipt.AppliedVersion;
             else
             {
-                RoomRules.Apply(room, actor, command, Now);
-                AddReceipt(guestId, command.CommandId, fingerprint, room);
+                apply(room, actor);
+                AddReceipt(guestId, commandId, fingerprint, room);
                 await database.SaveChangesAsync();
                 version = room.Version;
             }
@@ -165,7 +172,7 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
                 .Select(m => m.RoomId).Distinct().ToArrayAsync();
             var idleBefore = now - TimeSpan.FromHours(settings.IdleHours).Ticks;
             var deleteBefore = now - TimeSpan.FromHours(settings.RetentionHours).Ticks;
-            var expired = await database.Rooms.Where(r => r.Status == "lobby" && r.LastActivityTicks <= idleBefore).ToArrayAsync();
+            var expired = await database.Rooms.Where(r => (r.Status == "lobby" || r.Status == "playing") && r.LastActivityTicks <= idleBefore).ToArrayAsync();
             foreach (var room in expired)
             {
                 room.Status = "expired";

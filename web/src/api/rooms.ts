@@ -2,8 +2,10 @@ import type * as Contract from './room-contract.generated'
 
 export type Participant = Contract.ParticipantView
 export type EntryRequest = Contract.EntryRequest
+export type GameCommand = Contract.GameCommand
+export type GameView = Contract.GameView
 export interface RoomSnapshot extends Omit<Contract.RoomSnapshot, 'status'> {
-  status: 'lobby' | 'closed'
+  status: 'lobby' | 'playing' | 'closed'
 }
 export interface RoomCommand extends Omit<Contract.RoomCommand, 'targetId' | 'locked'> {
   targetId?: string
@@ -43,7 +45,7 @@ export function parseSnapshot(value: unknown): RoomSnapshot {
     typeof s.joinLocked !== 'boolean' ||
     !Number.isSafeInteger(s.capacity) ||
     s.capacity < 2 ||
-    !['lobby', 'closed'].includes(s.status) ||
+    !['lobby', 'playing', 'closed'].includes(s.status) ||
     !Array.isArray(s.allowedActions) ||
     !s.allowedActions.every((a) => ['lock', 'remove', 'transfer', 'close'].includes(a)) ||
     !Array.isArray(s.participants) ||
@@ -62,7 +64,49 @@ export function parseSnapshot(value: unknown): RoomSnapshot {
     !s.participants.some((p) => p.id === s.facilitatorId && p.isFacilitator)
   )
     throw new RoomError('invalid_response', 'The room response could not be read')
+  if (s.status === 'playing' && !s.game)
+    throw new RoomError('invalid_response', 'Missing game state')
+  if (s.game != null) parseGame(s.game)
   return s
+}
+function parseGame(g: Contract.GameView) {
+  const count = (n: number) => Number.isSafeInteger(n) && n >= 0
+  if (
+    !uuid.test(g.sessionId) ||
+    !uuid.test(g.roundId) ||
+    typeof g.gameId !== 'string' ||
+    g.gameId.length < 1 ||
+    g.gameId.length > 64 ||
+    !['responding', 'revealed', 'finished'].includes(g.stage) ||
+    !count(g.roundNumber) ||
+    g.roundNumber < 1 ||
+    !count(g.stageRevision) ||
+    g.stageRevision < 1 ||
+    !count(g.responseRevision) ||
+    !count(g.eligibleCount) ||
+    !count(g.responseCount) ||
+    g.responseCount > g.eligibleCount ||
+    typeof g.eligible !== 'boolean' ||
+    ![null, 'a', 'b', 'pass'].includes(g.ownChoice) ||
+    ![g.prompt, g.optionA, g.optionB].every((s) => typeof s === 'string' && s.length > 0) ||
+    !Array.isArray(g.allowedActions) ||
+    !g.allowedActions.every((a) =>
+      ['answer', 'reveal', 'skip', 'next', 'finish', 'lobby'].includes(a),
+    ) ||
+    !Array.isArray(g.results) ||
+    !g.results.every(
+      (r) =>
+        r &&
+        uuid.test(r.roundId) &&
+        count(r.number) &&
+        typeof r.skipped === 'boolean' &&
+        [r.prompt, r.optionA, r.optionB].every((s) => typeof s === 'string') &&
+        [r.a, r.b, r.passes, r.missing, r.percentA, r.percentB].every(count) &&
+        r.percentA <= 100 &&
+        r.percentB <= 100,
+    )
+  )
+    throw new RoomError('invalid_response', 'The game response could not be read')
 }
 
 export function newerSnapshot(
@@ -118,7 +162,10 @@ export function ensureSession(): Promise<string> {
   return session
 }
 
-async function mutate(path: string, payload: EntryRequest | RoomCommand): Promise<CommandResult> {
+async function mutate(
+  path: string,
+  payload: EntryRequest | RoomCommand | GameCommand,
+): Promise<CommandResult> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const token = await ensureSession()
     const response = await fetch(path, {
@@ -144,6 +191,8 @@ export const enterRoom = (request: EntryRequest, create: boolean) =>
   mutate(create ? '/api/rooms' : '/api/rooms/join', request)
 export const commandRoom = (id: string, command: RoomCommand) =>
   mutate(`/api/rooms/${id}/commands`, command)
+export const commandGame = (id: string, command: GameCommand) =>
+  mutate(`/api/rooms/${id}/game`, command)
 export async function getRoom(id: string, signal?: AbortSignal): Promise<RoomSnapshot> {
   const response = await fetch(`/api/rooms/${id}`, {
     signal: signal

@@ -28,7 +28,7 @@ npm --prefix web run dev
 ```
 
 Open http://localhost:5173. Vite forwards `/api` and `/hubs` to the API on port
-5100. `/hubs/rooms` carries authorized lobby snapshots. Development OpenAPI is
+5100. `/hubs/rooms` carries authorized room/game snapshots. Development OpenAPI is
 available at http://localhost:5100/openapi/v1.json. The Development configuration
 explicitly allows local HTTP cookies; production defaults require Secure cookies.
 Local data defaults to `server/TeamGames.Api/.data/`, which is ignored by Git.
@@ -216,3 +216,18 @@ User instructions define the authorized scope.
 Keep the setup commands and [operator guide](operations.md) current as features
 land. Add a game-module guide after the second module proves the extension
 boundary. Keep planned capabilities clearly distinct from implemented behavior.
+
+## Trying M2
+
+Host a room and choose **Start This or That**. Use separate browser profiles or
+regular/incognito contexts for independent players (incognito windows share a
+session with each other). Choose an option or pass; change it until reveal. The
+facilitator can reveal, skip, start the next round, or finish without waiting.
+Return to the lobby to start a fresh session. New arrivals watch the current
+round and become eligible at the next one. The 12-pair starter deck is exhausted
+after 12 rounds; finish and start another session to play again.
+
+M2 coverage is in `GameRulesTests.cs`, `GameFunctionalTests.cs`,
+`GamePanel.test.tsx`, the game transport cases in `rooms.test.ts`, and
+`web/e2e/game.spec.ts`. The full verification commands also retain all M0/M1
+regressions. `verify-compose.sh` checks all three EF migrations.

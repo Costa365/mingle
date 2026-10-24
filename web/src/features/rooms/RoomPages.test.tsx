@@ -94,6 +94,10 @@ describe('room lobby', () => {
     ['Make Player facilitator', 'transfer', room.participants[1].id, undefined],
   ])('submits %s with the current room version', async (button, action, targetId, locked) => {
     lobby()
+    if (action === 'transfer')
+      expect(screen.getByRole('button', { name: button as string })).toHaveTextContent(
+        'Make Player facilitator',
+      )
     await userEvent.click(screen.getByRole('button', { name: button as string }))
     await waitFor(() => expect(mocks.accept).toHaveBeenCalled())
     expect(mocks.command).toHaveBeenCalledWith(

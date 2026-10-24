@@ -177,7 +177,9 @@ function GameDetail({ state, retry }: { state: CatalogueState; retry: () => void
         <p>A facilitator keeps things moving. Share as much or as little as you like.</p>
       </div>
       <div className="availability">
-        <strong>Gameplay is coming soon</strong>
+        <strong>
+          {game.id === 'this-or-that' ? 'Ready to play in your room' : 'Gameplay is coming soon'}
+        </strong>
         <p>You can gather your team in a room now. No account is needed to join.</p>
         <Link className="button" to="/host">
           Host a room
@@ -197,7 +199,9 @@ function HowToPlay() {
         <br />
         Simple plans
       </h1>
-      <p className="page-intro">Create a room and invite your people. Gameplay is coming next.</p>
+      <p className="page-intro">
+        Create a room, invite your people, and play This or That together.
+      </p>
       <ol className="steps">
         <li>
           <span aria-hidden="true">01</span>

@@ -86,6 +86,20 @@ Each module receives the actor, eligible roster, current state, and injected tim
 or random values. It returns a new state or a domain error. It must handle forced
 advance, zero answers, passes, removed players, and invalid/stale commands.
 
+M2 implements `IGameModule` / `GameModules` with deterministic injected random
+selection and the This or That module. `Rooms.GameState` is a version 1 JSON
+envelope of sessions; each module owns its state representation. Completed rounds
+retain prompt text, roster and submissions separately from their immutable public
+aggregate results. Keep old state readable with an explicit migration when its
+schema or prompt identifiers change. Room deletion cascades by deleting this
+owned state with the room. No runtime type names are deserialized.
+
+The additive `game` DTO contains only the current viewer's answer/revision,
+aggregate response counts, server-authorized actions, and finalized result DTOs.
+The command includes session/round IDs, stage revision and own response revision.
+Answers do not compare the shared room version. Start compares the lobby version;
+all accepted commands still increment the room version for snapshot ordering.
+
 ## Identity and authorization
 
 - Create a cryptographically random guest session on first create/join. Store its

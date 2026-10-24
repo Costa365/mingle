@@ -286,7 +286,7 @@ public sealed class RoomFunctionalTests : IDisposable
         }
     }
 
-    private sealed class Browser : IDisposable
+    internal sealed class Browser : IDisposable
     {
         public required HttpClient Client { get; init; }
         public required CookieContainer Cookies { get; init; }

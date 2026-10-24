@@ -1076,3 +1076,67 @@ button:disabled {
     letter-spacing: 5px;
   }
 }
+
+.game-panel {
+  margin: 1.5rem 0 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--paper);
+}
+.game-panel h2 {
+  margin-top: 0;
+}
+.game-panel h3 {
+  font-size: 1.3rem;
+}
+.round-progress {
+  font-weight: 700;
+}
+.game-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+.choice-button {
+  min-height: 5rem;
+  padding: 1rem;
+  border: 2px solid #c7d4c8;
+  border-radius: 1rem;
+  background: #fffdf7;
+  color: #173d32;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.choice-button:last-child {
+  grid-column: 1 / -1;
+  min-height: 3rem;
+}
+.choice-button.is-selected {
+  border-color: #215e49;
+  background: #e1eedb;
+}
+.choice-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.game-controls {
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+.game-results {
+  display: grid;
+  gap: 1rem;
+}
+.game-results article {
+  padding: 0.5rem 1rem;
+  border-left: 3px solid #4b7654;
+}
+@media (max-width: 480px) {
+  .game-choices {
+    grid-template-columns: 1fr;
+  }
+}

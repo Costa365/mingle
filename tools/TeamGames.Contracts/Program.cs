@@ -2,9 +2,10 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Games;
 
 // Generate from the actual public DTOs, never from EF entities or credentials.
-Type[] types = [typeof(ParticipantView), typeof(RoomSnapshot), typeof(EntryRequest), typeof(RoomCommand), typeof(CommandResult), typeof(SessionView), typeof(RoomErrorView)];
+Type[] types = [typeof(GameCommand), typeof(RoundResult), typeof(GameView), typeof(ParticipantView), typeof(RoomSnapshot), typeof(EntryRequest), typeof(RoomCommand), typeof(CommandResult), typeof(SessionView), typeof(RoomErrorView)];
 var nullable = new NullabilityInfoContext();
 var output = new StringBuilder("// Generated from TeamGames.Core room DTOs. Run the contracts tool to update.\n\n");
 foreach (var type in types)
