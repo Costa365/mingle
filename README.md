@@ -25,16 +25,16 @@ and close the room. Reloads, duplicate tabs, and API restarts preserve membershi
 and ownership. Room changes and retry receipts persist in SQLite.
 
 **M2 — This or That** now has a playable flow: choose either option or pass,
-change your answer before reveal, compare totals, and continue, skip, or finish.
+change your answer before reveal, compare totals and each player’s named choice after reveal, and continue, skip,
+or finish.
 Facilitators can advance with missing or disconnected players. Private answers,
 stages, finalized results, and retry receipts survive API restarts. The starter
 deck contains 12 reviewed pairs; larger prompt libraries and authoring are M3.
 
 The other four games and administration remain planned. Unit, API/hub functional,
-and desktop/mobile browser tests run in CI. The original M2 slice passed
-[hosted CI](https://github.com/Costa365/mingle/actions/runs/40114848655). See the
-implementation plan for acceptance and test evidence. Named choices after reveal
-are being added to encourage conversation; their verification is in progress.
+and desktop/mobile browser tests run in CI. M2 is complete, including named choices after reveal and
+[hosted CI](https://github.com/Costa365/mingle/actions/runs/40116725312). See the
+implementation plan for acceptance and test evidence.
 
 ## Run locally with Docker
 

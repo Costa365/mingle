@@ -9,7 +9,8 @@ with Docker Compose. Support all five requested games and future game modules.
 The foundation and M1 room lifecycle are implemented: catalogue, create/join/lobby,
 guest cookies, facilitator controls, authorized SignalR updates, durable receipts,
 expiry, and recovery. M2 adds a playable This or That game with private answers,
-facilitator pacing, finalized aggregate results, and durable game recovery. Prompt
+facilitator pacing, named choices after reveal, finalized results, and durable
+game recovery. Prompt
 management, the other four games, and administration remain planned (M3–M6).
 Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
