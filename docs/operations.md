@@ -101,7 +101,9 @@ can be recovered. Restore only while the API is stopped and preserve its ownersh
 Startup applies EF migrations. Review future migrations before upgrading; an
 older image is not automatically compatible with a newer schema. Keep the previous
 image and the matching data backup for rollback. A full operator backup/restore
-rehearsal is scheduled for M6; M0 verifies host/container restart persistence.
+rehearsal is scheduled for M6. M2 verifies private answers and stage/results
+recovery across API restart and a local M1-to-M2 upgrade with a stopped-volume
+backup, preservation comparisons, and SQLite integrity validation.
 
 M1 migration adds guests, rooms, memberships, and command receipts without changing
 the installation marker or key ring. An upgrade test starts from the M0 schema.

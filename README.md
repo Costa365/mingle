@@ -31,8 +31,9 @@ stages, finalized results, and retry receipts survive API restarts. The starter
 deck contains 12 reviewed pairs; larger prompt libraries and authoring are M3.
 
 The other four games and administration remain planned. Unit, API/hub functional,
-and desktop/mobile browser tests run in CI. M2 verification is in progress; see
-the implementation plan for the current acceptance evidence.
+and desktop/mobile browser tests run in CI. M2 is complete, including
+[hosted CI](https://github.com/Costa365/mingle/actions/runs/40114848655). See the
+implementation plan for acceptance and test evidence.
 
 ## Run locally with Docker
 

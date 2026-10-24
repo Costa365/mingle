@@ -4,12 +4,13 @@
 
 Deliver the application in [product.md](product.md) using the proposed
 [architecture](architecture.md). This plan was initialized on 2026-10-23 from
-[idea.md](../idea.md). **M0 — Buildable foundation** and **M1 — Rooms, identity,
-and recovery foundation** are implemented and locally verified. Teams can create
-and join rooms, manage a live lobby, and recover membership after reload or API
-restart. **M0 and M1 are complete**, including their hosted CI acceptance gates.
-The [successful GitHub run](https://github.com/Costa365/mingle/actions/runs/40099054327)
-verified commit `bc5e96d`. M2 implementation is in verification; M3–M6 remain unimplemented.
+[idea.md](../idea.md). **M0 — Buildable foundation**, **M1 — Rooms, identity,
+and recovery foundation**, and **M2 — First complete game: This or That** are
+implemented and verified locally and in hosted CI. Teams can create and join
+rooms, play multiple rounds, manage their gathering, and recover membership and
+private game state after API restart. M2 passed the
+[required GitHub check](https://github.com/Costa365/mingle/actions/runs/40114848655)
+on implementation commit `e17c185`. M3–M6 remain unimplemented; M3 is next.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -119,14 +120,14 @@ its retained data and stops access.
 
 Depends on M1. This is the first playable vertical slice.
 
-- [ ] Define the game module/registry contract and the shared round command model.
-- [ ] Implement responding, pass/change answer, reveal, skip, next round, finish,
+- [x] Define the game module/registry contract and the shared round command model.
+- [x] Implement responding, pass/change answer, reveal, skip, next round, finish,
   and return-to-lobby behavior with a small reviewed prompt seed.
-- [ ] Add separate stage/response revisions, deduplication, frozen round rosters,
+- [x] Add separate stage/response revisions, deduplication, frozen round rosters,
   per-viewer projections, and finalized results.
-- [ ] Build facilitator controls and player answer/reveal screens with visible
+- [x] Build facilitator controls and player answer/reveal screens with visible
   response counts and clear unavailable actions.
-- [ ] Add unit and functional tests for every game action and UI state, including
+- [x] Add unit and functional tests for every game action and UI state, including
   rules, authorization, concurrent commands, hidden state, and browser flows.
 
 **Acceptance:** One facilitator and at least two players finish multiple rounds.
@@ -135,12 +136,31 @@ answers. Double-clicks/retries cannot advance twice. Simultaneous valid player
 answers succeed. A stale answer after reveal fails clearly. Choices stay private
 until reveal. API restart restores the exact last acknowledged stage and answers.
 
-
 ### M2 implementation and verification — 2026-10-24
 
 This or That is implemented with 12 reviewed seed pairs and a server module
-registry. Required local and hosted verification gates are in progress; the M2
-checkboxes remain open until both pass.
+registry. All five M2 checklist items are complete: both test layers passed
+locally and in the [hosted verification run](https://github.com/Costa365/mingle/actions/runs/40114848655)
+for `e17c185`.
+
+Verification evidence:
+
+- `scripts/verify.sh` passed locked restores, backend/frontend builds, generated
+  DTO checks, formatting, lint, four verifier unit tests, 66 backend unit tests,
+  21 real API/hub functional tests, and 81 frontend unit/component tests.
+- All 36 desktop/mobile browser tests passed through Vite and again through
+  Nginx in `scripts/verify-compose.sh`. Container verification passed routing,
+  health, cache/security headers, sanitized logs, WAL mode, three migrations,
+  installation identity, and key-ring persistence after API recreation.
+- The real local preview was upgraded from M1 after a stopped-volume backup.
+  Before/after comparisons preserved installation, rooms, memberships, guest
+  identities, command receipts, and keys; SQLite integrity passed. Both
+  containers are healthy on port 8080.
+- Browser gameplay and summary screenshots were inspected at 360px; axe,
+  keyboard reveal, reduced-motion operation, and no horizontal overflow passed.
+  CI retains its reports/screenshots in the `verification-results` artifact.
+- A final retention assertion also verifies that starting another session keeps
+  the previous session in persisted state; its focused unit test passed.
 
 | Feature and acceptance | Unit coverage | Functional coverage |
 | --- | --- | --- |
@@ -153,6 +173,7 @@ checkboxes remain open until both pass.
 | Usable mobile/keyboard UI, reduced motion and accessible controls | Game/room component tests, transport validation tests | Desktop and 360px browser flows with axe, Enter-key reveal, overflow checks and screenshots |
 
 M2 decisions:
+
 - Gameplay uses the same authenticated, CSRF-protected HTTP command path and
   post-commit per-viewer hub publisher as room controls. Separate stage and own
   response revisions avoid rejecting another player's concurrent answer.

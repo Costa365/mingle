@@ -120,6 +120,7 @@ public sealed class GameRulesTests
         Assert.Null(games.Project(room, host));
         Start();
         Assert.NotEqual(first, View().SessionId);
+        Assert.Contains(first.ToString(), room.GameState!); // Previous sessions remain durable when starting another game.
     }
     [Fact]
     public void SeedDoesNotRepeatAndExhaustionStillAllowsFinishing()
