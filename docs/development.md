@@ -115,12 +115,24 @@ automatic reconnect retry with bounded backoff; manual retry remains available.
 
 ## CI
 
-`.github/workflows/ci.yml` runs both verification scripts on pushes and pull
-requests, including all unit/API tests and both browser viewport suites through
-Docker. It uploads browser reports and failure traces. Configure the **Unit and
-functional tests** job as a required branch check when connecting a GitHub remote.
-There is no remote configured in this workspace yet, so a hosted CI run cannot be
-triggered here. Keep that acceptance gate pending until a run succeeds.
+The [GitHub repository](https://github.com/Costa365/mingle) runs
+`.github/workflows/ci.yml` on pushes, pull requests, and manual dispatch. Its
+**Unit and functional tests** job runs both verification scripts: verifier unit
+tests, backend unit/API/hub tests, frontend unit tests, and desktop/mobile browser
+flows through real Docker/Nginx. Any failed layer fails the job. Bash `pipefail`
+preserves failures while saving console output with `tee`.
+
+The workflow pins official Node 24 Actions by immutable commit, installs the
+repository's .NET and Node versions, and caches package downloads. The
+`verification-results` artifact contains build/test logs and browser reports or
+failure traces. Failed container runs also save sanitized Compose status/logs;
+databases and key rings are never uploaded. Diagnostic or teardown failures cannot
+mask the original test failure. Cleanup failure also fails an otherwise green run.
+
+Use **Unit and functional tests** as the required check for `main`. Hosted CI
+results and milestone closure evidence are recorded in the implementation plan.
+The verifier uses `compose up --wait --no-recreate` to resume the API because the
+hosted Compose version does not support `compose start --wait`.
 
 ## Testing requirement for every feature
 

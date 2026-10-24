@@ -7,8 +7,9 @@ Deliver the application in [product.md](product.md) using the proposed
 [idea.md](../idea.md). **M0 — Buildable foundation** and **M1 — Rooms, identity,
 and recovery foundation** are implemented and locally verified. Teams can create
 and join rooms, manage a live lobby, and recover membership after reload or API
-restart. M2–M6 remain unimplemented; playable games start with M2. Hosted CI gates
-remain pending because this repository has no Git remote configured.
+restart. M2–M6 remain unimplemented; playable games start with M2. The GitHub
+remote is now configured; hosted CI gates remain pending until the complete
+workflow passes. The first hosted run exposed a Compose compatibility issue.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -241,6 +242,16 @@ test or acceptance failure prevents release completion and is recorded explicitl
 | Operations | Fresh install, upgrade, backup/restore, health checks, and measured load run |
 
 ## Progress and evidence
+
+- 2026-10-24: Connected `https://github.com/Costa365/mingle`. The
+  [first hosted run](https://github.com/Costa365/mingle/actions/runs/40097369421)
+  passed build/unit/API checks and container persistence, then failed because the
+  runner's Compose rejects `start --wait`. Replaced it with the compatible
+  `up --detach --wait --no-recreate` operation. Added four verifier unit cases for
+  older Compose behavior, retained failure diagnostics, original exit status, and
+  teardown failure. Updated official Actions to pinned Node 24 releases, enabled
+  manual dispatch, and retained verification logs/reports as artifacts. Hosted
+  completion remains pending a successful run of this fix.
 
 - 2026-10-24: Implemented M1 rooms, guest credentials, facilitator controls,
   authenticated SignalR subscriptions, transient presence, durable receipts,

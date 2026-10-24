@@ -9,9 +9,18 @@ export TEAMGAMES_PORT="${TEAMGAMES_TEST_PORT:-18080}"
 compose() { docker compose -p "$project" "$@"; }
 cleanup() {
   status=$?
-  if [ "$status" -ne 0 ]; then compose logs --tail=100; fi
+  trap - EXIT
+  set +e
+  if [ "$status" -ne 0 ]; then
+    mkdir -p artifacts/verification
+    compose ps --all > artifacts/verification/compose-status.txt 2>&1
+    compose logs --no-color --tail=200 > artifacts/verification/compose.log 2>&1
+    cat artifacts/verification/compose.log
+  fi
   compose down --volumes --remove-orphans
+  cleanup_status=$?
   rm -rf "$check_directory"
+  if [ "$status" -eq 0 ] && [ "$cleanup_status" -ne 0 ]; then status=$cleanup_status; fi
   exit "$status"
 }
 trap cleanup EXIT
@@ -44,7 +53,7 @@ def keys(name):
 assert keys('keys-before') and keys('keys-before') == keys('keys-after'), 'Key ring did not persist'
 print('Database, migration history, WAL mode, and Data Protection keys survived API recreation.')
 PY
-compose start --wait api
+compose up --detach --wait --no-recreate --wait-timeout 60 api
 PLAYWRIGHT_BASE_URL="http://127.0.0.1:$TEAMGAMES_PORT" \
 TEAMGAMES_TEST_COMPOSE_PROJECT="$project" npm --prefix web run test:e2e
 compose logs --no-color web > "$check_directory/web.log"

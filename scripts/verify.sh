@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+python3 -m unittest discover -s tests/verification -p 'test_*.py'
 dotnet restore TeamGames.slnx --locked-mode
 dotnet build TeamGames.slnx --no-restore --disable-build-servers -m:1
 dotnet run --project tools/TeamGames.Contracts --no-build -- --check

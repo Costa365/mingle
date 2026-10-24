@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
+**/__pycache__/
 **/node_modules/
 web/dist/
 web/coverage/
