@@ -1,4 +1,4 @@
-# Team Games — repository guidance
+# Mingle — repository guidance
 
 ## Purpose and scope
 
@@ -6,9 +6,11 @@ Build an account-free remote team games application from [idea.md](idea.md).
 The required stack is React and ASP.NET Core on .NET 10, deployed on one host
 with Docker Compose. Support all five requested games and future game modules.
 
-The repository currently contains documentation only. Application directories,
-commands, and milestones below are planned until their implementation lands.
-Do not describe planned features or unexecuted checks as working.
+The first foundation milestone is implemented: React catalogue pages, an ASP.NET
+API, SQLite initialization, Docker Compose, and automated tests. Room hosting,
+identity, realtime gameplay, and administration are still planned. Consult the
+implementation plan for verification status; do not describe unexecuted checks or
+future features as working.
 
 ## Where to look
 

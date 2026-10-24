@@ -26,6 +26,13 @@ current activity, such as collecting answers, voting, or revealing results.
 | Administration | Protected overview of rooms/game sessions and controls to manage them |
 | Maintainability | Agent guidance, developer documentation, tests, and deployment documentation |
 
+## Presentation
+
+Branding uses a group-of-people icon, the name **Mingle**, and the tagline
+**Team games** beneath the name. Browser titles use Mingle too.
+Headings, titles, and the wordmark use no full stops. Body paragraphs retain normal
+punctuation. This presentation preference applies to future screens too.
+
 ## Shared room behavior
 
 - The facilitator can also play, choose a game, start it, view answer counts,

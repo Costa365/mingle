@@ -1,47 +1,108 @@
 # Development and agent workflow
 
-## Current workspace
+## Tooling and setup
 
-This is a documentation-only project as of 2026-10-23. The environment exposes
-.NET SDK 10.0.113, Node.js 22.22.1, npm 9.2.0, Docker 29.5.2, and Docker Compose
-5.1.4. These are observed local versions, not final dependency pins. The Docker
-daemon, package restores, and compatibility of the future scaffold have not been
-verified. Pin supported compatible versions during M0.
+Use a .NET 10 SDK and Node.js 22.22.1 (`.nvmrc`). `global.json` allows installed
+.NET 10 feature bands; Docker and CI pin the Microsoft SDK to 10.0.402 and the
+runtime/EF packages to 10.0.13. The local Ubuntu SDK is 10.0.113. npm and NuGet
+lockfiles pin dependencies; restore in locked mode in verification and containers.
+Docker Engine with the Compose plugin and Python 3 are required for deployment
+checks. Git is initialized; changes to `.git` may need sandbox approval in Codex.
 
-`git status` currently reports that this workspace is not a Git repository. Its
-`.git` path is a read-only environment placeholder. No Git metadata, commits, or
-remote configuration were created; normal version control must be established in
-a writable checkout before relying on CI or branch-based workflows.
+From the repository root:
 
-## Planned commands
+```bash
+dotnet restore TeamGames.slnx --locked-mode
+dotnet tool restore
+npm --prefix web ci
+```
 
-The following commands define the intended developer interface. They are **not
-runnable yet** because the solution, package manifest, and Compose file do not
-exist. Implement and verify these commands in M0, then replace this caveat with a
-tested quickstart.
+For development, use two terminals:
 
-| Purpose | Planned command from repository root |
+```bash
+dotnet watch --project server/TeamGames.Api
+```
+
+```bash
+npm --prefix web run dev
+```
+
+Open http://localhost:5173. Vite forwards `/api` and `/hubs` to the API on port
+5100. SignalR hub implementation is deferred to M1; the route is prepared in the
+proxy. Development OpenAPI is available at http://localhost:5100/openapi/v1.json.
+Local data defaults to `server/TeamGames.Api/.data/`, which is ignored by Git.
+Set `Storage__DataDirectory` to a different directory when needed.
+
+## Commands
+
+| Purpose | Command from repository root |
 | --- | --- |
-| Restore backend | `dotnet restore TeamGames.slnx` |
-| Build backend | `dotnet build TeamGames.slnx --no-restore` |
-| Backend unit and API functional/integration tests | `dotnet test TeamGames.slnx --no-build` |
+| Restore backend | `dotnet restore TeamGames.slnx --locked-mode` |
+| Build backend | `dotnet build TeamGames.slnx --no-restore --disable-build-servers -m:1` |
+| Backend unit and API functional tests | `dotnet test TeamGames.slnx --no-build --disable-build-servers -m:1` |
 | Backend format check | `dotnet format TeamGames.slnx --verify-no-changes --no-restore` |
 | Install frontend | `npm --prefix web ci` |
-| Run API | `dotnet watch --project server/TeamGames.Api` |
-| Run frontend | `npm --prefix web run dev` |
 | Type check | `npm --prefix web run typecheck` |
 | Lint | `npm --prefix web run lint` |
+| Frontend format check | `npm --prefix web run format:check` |
 | Frontend unit/component tests | `npm --prefix web run test -- --run` |
-| Frontend build | `npm --prefix web run build` |
+| Frontend production build | `npm --prefix web run build` |
 | Browser functional tests | `npm --prefix web run test:e2e` |
 | Validate Compose | `docker compose config --quiet` |
-| Run deployment | `docker compose up --build` |
+| Run deployment | `docker compose up --build --detach --wait` |
+| Build/lint/unit/API verification | `bash scripts/verify.sh` |
+| Container/browser verification | `bash scripts/verify-compose.sh` |
 
-The Vite development proxy should forward API and hub requests to ASP.NET so
-development exercises same-origin cookies and WebSocket upgrades. Configure
-Playwright to launch the application and use independent browser contexts for
-participants; multiple tabs in one context intentionally share a guest identity.
-Document browser installation and any integration-test services when configured.
+Before the first browser run, install Chromium from `web/`:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+Build the backend in Debug and the frontend before running `test:e2e`. Playwright
+starts the built API on port 5101 and serves the frontend build through Vite
+preview on port 4173. It owns an isolated temporary SQLite directory, stops the
+real API to test failure/retry, and tears down its process and data afterward.
+Do not run another server on those ports during this suite. Desktop (1440px) and
+mobile (360px) projects both run all flows and accessibility checks.
+
+`verify-compose.sh` builds an isolated Compose project on port 18080 (override
+with `TEAMGAMES_TEST_PORT`), validates routing/cache/security headers, recreates the
+API to check database and key persistence, and runs the browser suite through
+Nginx. Its cleanup deletes only that temporary project's containers and volume.
+It requires installed browser dependencies; it does not install them itself.
+
+For a constrained agent environment, local test runners and browser servers may
+need permission to bind sockets. `DOTNET_CLI_HOME`, `npm_config_cache`, and
+`PLAYWRIGHT_BROWSERS_PATH` can point to writable temporary directories. These are
+execution-environment adjustments, not application requirements. Do not bypass
+sandbox restrictions; request the permitted escalation when necessary.
+
+## Migrations and contracts
+
+Create migrations with the pinned repository tool:
+
+```bash
+dotnet ef migrations add ChangeName --project server/TeamGames.Infrastructure --startup-project server/TeamGames.Api --output-dir Persistence/Migrations
+```
+
+Startup applies migrations before listening and creates the installation marker
+once. Readiness checks query that marker; liveness is independent of storage.
+Tests use real temporary SQLite files and exercise a complete host restart.
+
+The initial `/api/games` JSON contract is represented by `GameSummary` in C# and
+TypeScript, validated at the client boundary, and exercised by API and real-browser
+tests. Generated HTTP types and a separate hub protocol contract will be added
+with room commands in M1; no SignalR contract is claimed as implemented yet.
+
+## CI
+
+`.github/workflows/ci.yml` runs both verification scripts on pushes and pull
+requests, including all unit/API tests and both browser viewport suites through
+Docker. It uploads browser reports and failure traces. Configure the **Unit and
+functional tests** job as a required branch check when connecting a GitHub remote.
+There is no remote configured in this workspace yet, so a hosted CI run cannot be
+triggered here. Keep that acceptance gate pending until a run succeeds.
 
 ## Testing requirement for every feature
 
@@ -51,7 +112,7 @@ invites, identity, room controls, prompts, administration, UI states, reconnecti
 and persistence. Small features follow the same rule. Do not postpone their tests
 to the final verification milestone.
 
-| Layer | What it establishes | Planned tooling |
+| Layer | What it establishes | Tooling |
 | --- | --- | --- |
 | Unit | Rules, validation, transitions, calculations, and component behavior in isolation | xUnit for C#; Vitest and Testing Library for TypeScript/React |
 | API/hub functional | A feature's observable behavior through real application endpoints, authentication, serialization, and persistence | ASP.NET test hosting, HTTP/SignalR clients, and real temporary SQLite databases |
@@ -120,8 +181,6 @@ and limitations. Keep validation reproducible through scripts and CI. Do not add
 new approval rituals or a large agent framework for ordinary implementation work.
 User instructions define the authorized scope.
 
-Document setup as it becomes executable. During implementation add an operator
-guide with environment variables, CDN/TLS routing, key/database persistence,
-upgrade/migration/rollback steps, backup/restore, and health troubleshooting. Add a
-game-module guide after the second module proves the extension boundary. Keep
-planned paths and commands clearly distinct from files that already exist.
+Keep the setup commands and [operator guide](operations.md) current as features
+land. Add a game-module guide after the second module proves the extension
+boundary. Keep planned capabilities clearly distinct from implemented behavior.

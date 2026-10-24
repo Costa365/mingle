@@ -4,8 +4,10 @@
 
 Deliver the application in [product.md](product.md) using the proposed
 [architecture](architecture.md). This plan was initialized on 2026-10-23 from
-[idea.md](../idea.md). Only documentation exists. Every implementation milestone
-below is pending; no application checks have been run.
+[idea.md](../idea.md). The first stage, **M0 — Buildable foundation**, is implemented
+and locally verified. It includes a public catalogue and game
+instructions, not playable rooms. M1–M6 remain unimplemented. M0's hosted CI gate
+is pending because this repository has no Git remote configured.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -30,13 +32,25 @@ Testing is part of each milestone, not deferred to M6.
 - Bug fixes include regression coverage. Follow the detailed test definitions in
   [development.md](development.md).
 
-Use this record for each implemented feature:
+M0 acceptance coverage (paths are relative to the repository root):
 
 | Feature / acceptance criteria | Unit tests | Functional tests | Execution evidence / remaining gaps |
 | --- | --- | --- | --- |
-| Add concrete feature entries during implementation | Test file and cases | Test file and cases | Commands, results, and CI run |
+| People icon replaces all star marks; wordmark reads "Mingle" with the tagline "Team games"; headings contain no full stops | `web/src/app/App.test.tsx`: brand name/tagline, decorative icon semantics, punctuation on home/how-to/not-found/detail and error headings | `web/e2e/foundation.spec.ts`: loaded icons, exact brand/tagline and Mingle browser titles, punctuation across routes and error state, both viewports, axe and keyboard checks | 27 frontend unit tests and 20 browser cases pass locally; build/lint/format pass; screenshots reviewed; hosted CI pending |
+| All five catalogue entries have valid metadata; exact IDs resolve and unknown IDs fail | `tests/TeamGames.Core.Tests/GameCatalogTests.cs`: metadata, uniqueness, exact/unknown IDs; `web/src/api/games.test.ts`: malformed/duplicate payloads and request failures | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: catalogue and every detail through HTTP; `web/e2e/foundation.spec.ts`: all five detail flows | Local .NET and frontend suites pass; hosted CI pending |
+| Home, detail, how-to, and not-found routes render and allow navigation; hosting is clearly unavailable | `web/src/app/App.test.tsx`: each detail route, navigation, instructions, recovery links, future-hosting explanation | `web/e2e/foundation.spec.ts`: each route through the real backend, direct loads and reloads, desktop/mobile | Browser results recorded below; hosted CI pending |
+| Loading is announced; an API failure offers retry and recovers | `web/src/app/App.test.tsx`: pending request, cancellation, error/retry on home and detail; `web/src/api/games.test.ts`: rejected/invalid responses | `web/e2e/foundation.spec.ts`: delayed real request and real API stop/restart/retry in both viewports | Browser results recorded below; hosted CI pending |
+| Storage paths are validated; fresh SQLite is migrated; readiness reflects storage while liveness remains independent | `tests/TeamGames.Core.Tests/StoragePathsTests.cs`: relative/absolute/invalid paths; `tests/TeamGames.Api.Tests/StorageHealthCheckTests.cs`: success, failure, sanitized exceptions, cancellation | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: migration, dropped storage table, invalid/unwritable configuration | Local .NET suites pass; hosted CI pending |
+| Database identity and Data Protection keys survive host/container recreation | Storage path and readiness unit cases above cover persistence configuration and failure reporting | `FoundationFunctionalTests.cs`: fresh host restores installation and decrypts a protected value; `scripts/verify-compose.sh`: recreates API and compares database, migrations, WAL mode, and key ring | Container persistence checks pass; hosted CI pending |
+| Same-origin deployment routes API errors correctly, supports SPA deep links, and applies cache/security headers | Catalogue request/route and health unit cases above | `scripts/check-deployment.py`: HTTP assertions through Nginx; `foundation.spec.ts`: desktop/mobile navigation, keyboard skip link, overflow and axe checks; `FoundationFunctionalTests.cs`: development-only OpenAPI | Deployment checks pass; browser results below; hosted CI pending |
 
 ## M0 — Buildable foundation
+
+**Status:** All implementation items below are present. Checkboxes remain pending
+until local verification and the required hosted CI run both pass. The GitHub
+Actions workflow runs both verification scripts and uploads browser artifacts;
+the repository owner must connect a GitHub remote and require its **Unit and
+functional tests** check before this milestone can be marked complete.
 
 - [ ] Create the .NET 10 solution, API/Core/Infrastructure projects, and test
   projects; enable nullable references and consistent formatting.
@@ -213,12 +227,52 @@ test or acceptance failure prevents release completion and is recorded explicitl
 - Documentation verification: all 22 local links resolve, Markdown code fences
   are balanced, all five games are specified, and no implementation task is
   marked complete. The original `idea.md` remains unchanged.
-- Workflow updated at the user's request: every feature now requires unit and
+- Workflow updated at the user's request: every feature requires unit and
   functional tests in the same change, tracked acceptance coverage, and passing
-  CI results before completion. No application tests exist or have run yet.
-- Next action: M0, beginning with the .NET solution and React scaffold.
+  CI results before completion. The following implementation supplies those layers.
+- 2026-10-23: Implemented M0's .NET/React scaffold, five-game public catalogue,
+  error/loading/retry and not-found views, real SQLite initialization, persisted
+  Data Protection keys, Docker/Nginx deployment, verification scripts, and CI.
+- `bash scripts/verify.sh`: passed locked restores, backend build/format,
+  **19 backend unit tests + 7 API functional tests**, frontend type/lint/format,
+  **23 frontend unit/component tests**, production build, and Compose validation.
+  Local execution used writable temporary package/tool caches and permission to
+  bind test sockets; these adjustments are documented in the development guide.
+- Deployment verification passed HTTP routing, error/content types, deep links,
+  security/cache headers, fresh migration, WAL, database identity, and key-ring
+  persistence after API container recreation. Final `bash scripts/verify-compose.sh`
+  passed all deployment assertions and **20/20 browser cases** through Nginx
+  (46.9 seconds for the browser suite), with zero skipped tests. The verifier
+  removed its temporary containers and volume after success.
+- The initial browser run found insufficient contrast on a desktop card number
+  (4.45:1). Increased text opacity; the existing axe assertion is regression
+  coverage. Desktop and 360px mobile screenshots were also visually reviewed.
+- The outage test's assertion originally shared the client's 10-second deadline,
+  causing a race when Docker DNS resolution stalled. The assertion now allows
+  15 seconds for the client's timeout to render the error. The direct local
+  browser command passes **20/20 cases**, including real API stop/restart/retry.
+- A functional test exposed early storage-configuration resolution before the
+  test host's configuration override. Resolution now occurs through DI using final
+  configuration; invalid-path, distinct temporary database, and restart tests pass.
+- Hosted CI has **not run**: `git remote -v` is empty. M0 remains pending that gate.
+  No rooms, authentication, hubs, game rules, prompt management, or administration
+  are claimed as implemented or tested. Next implementation milestone is M1.
+
+- Branding refinement: replaced all three star marks with a shared local people
+  SVG; capitalized the wordmark; removed full stops from headings, eyebrow labels,
+  and decorative card titles. Recorded the preference in the product requirements.
+  All 27 frontend unit/component tests and all 20 desktop/mobile browser cases
+  pass. Type checking, production build, lint, and formatting pass. Reviewed
+  desktop and 360px screenshots and rebuilt the running local frontend.
 
 ## Decision log
+
+- Renamed the product to **Mingle** with **Team games** beneath the wordmark.
+  Updated browser titles, accessible home-link text, product guidance, and branding
+  regression tests. Final verification: 27 frontend unit/component tests and all
+  20 desktop/mobile browser cases passed, including axe checks (32.9 seconds).
+  Build, type checking, lint, and formatting passed. The local Docker frontend was
+  rebuilt and became healthy. Hosted CI remains pending.
 
 | Date | Decision | Rationale / revisit condition |
 | --- | --- | --- |
@@ -229,6 +283,11 @@ test or acceptance failure prevents release completion and is recorded explicitl
 | 2026-10-23 | Guest cookies and configured admin credential | Account-free entry with distinct, server-enforced privileges |
 | 2026-10-23 | Room-local facilitator prompts; admin global prompts | Allows authoring while controlling the shared library |
 | 2026-10-23 | Unit and functional tests for every feature | User requirement; both layers ship with the feature and gate completion |
+| 2026-10-23 | Interpret "stage 1" as M0, the first milestone | Establish a usable and tested foundation before room/identity work |
+| 2026-10-23 | .NET 10 SDK feature-band roll-forward locally; SDK 10.0.402/runtime 10.0.13 pinned in Docker/CI | Ubuntu's installed SDK is 10.0.113; official Microsoft container SDK tags differ. Both application images build successfully |
+| 2026-10-23 | Keep SQLite and Data Protection keys in one `app-data` volume | Preserve them together across recreation and future backups; one API process only |
+| 2026-10-23 | Self-host fonts and use CSS/SVG artwork | Same-origin assets work with the restrictive CSP and need no third-party runtime requests |
+| 2026-10-23 | Browser tests own temporary API state and stop the real API for retry coverage | Verify observable recovery without a mocked backend; Compose tests delete only their isolated project/volume |
 
 ## Open refinements
 

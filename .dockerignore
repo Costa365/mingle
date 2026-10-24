@@ -1,0 +1,15 @@
+.git
+.agents
+.aws
+.codex
+**/bin
+**/obj
+**/node_modules
+**/.data
+web/dist
+web/test-results
+web/playwright-report
+artifacts
+.env
+.env.*
+*.db*

@@ -1,6 +1,9 @@
 # Proposed architecture
 
-Status: implementation design, recorded 2026-10-23. No components exist yet.
+Status: foundation implemented on 2026-10-23. The catalogue, health endpoints,
+SQLite initialization, protected key persistence, frontend routes, and container
+proxy exist. Identity, room commands, SignalR subscriptions, and game modules
+below describe the next milestones. See the implementation plan for test evidence.
 
 ## Components and decisions
 
@@ -28,23 +31,23 @@ A Vite SPA is an intentional choice for these requirements. React documents this
 route while noting that routing and data-fetching conventions must be supplied by
 the application. [React documentation](https://react.dev/learn/build-a-react-app-from-scratch)
 
-## Planned layout
+## Repository layout and planned extensions
 
 ```text
 TeamGames.slnx
 server/
-  TeamGames.Api/               # HTTP endpoints, hub, auth, application composition
-  TeamGames.Core/              # Room services, game rules, DTO projections, ports
+  TeamGames.Api/               # HTTP endpoints/composition; hub and auth planned
+  TeamGames.Core/              # Catalogue/storage contracts; room/game rules planned
   TeamGames.Infrastructure/    # EF Core, migrations, persistence implementations
 web/
   src/
     app/                      # Routing and application shell
-    features/                 # Rooms, facilitation, prompts, administration
-    games/                    # Registry and game-specific views
-    realtime/                 # Connection lifecycle and snapshot reconciliation
+    features/                 # Planned: rooms, facilitation, prompts, administration
+    games/                    # Planned: registry and game-specific views
+    realtime/                 # Planned: connection lifecycle and reconciliation
     api/                      # Typed API client and transport contracts
     ui/                       # Shared accessible components and design tokens
-  e2e/                        # Playwright multi-participant scenarios
+  e2e/                        # Playwright; multi-participant scenarios planned
 tests/
   TeamGames.Core.Tests/
   TeamGames.Api.Tests/
@@ -204,8 +207,9 @@ to their persisted memberships and rounds.
 
 Compose builds the frontend in a Node build stage and serves the output from
 Nginx, which proxies `/api/*` and `/hubs/*` to a multi-stage .NET API image. Only the
-proxy publishes a host port. Use persistent volumes for the database and protected
-keys. Run as non-root where supported; include readiness/liveness endpoints and
+proxy publishes a host port. Use the persistent `app-data` volume for the database
+and its `keys/` subdirectory, so backups retain the database and protected key ring
+together. Run as non-root where supported; include readiness/liveness endpoints and
 graceful shutdown. Readiness requires migrations and storage initialization.
 
 Compose startup ordering is insufficient to establish readiness; gate dependencies

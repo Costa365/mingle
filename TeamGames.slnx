@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/server/">
+    <Project Path="server/TeamGames.Api/TeamGames.Api.csproj" />
+    <Project Path="server/TeamGames.Core/TeamGames.Core.csproj" />
+    <Project Path="server/TeamGames.Infrastructure/TeamGames.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TeamGames.Core.Tests/TeamGames.Core.Tests.csproj" />
+    <Project Path="tests/TeamGames.Api.Tests/TeamGames.Api.Tests.csproj" />
+  </Folder>
+</Solution>
