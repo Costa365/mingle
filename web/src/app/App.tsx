@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { loadGames } from '../api/games'
 import type { GameSummary } from '../api/games'
+import { RoomEntry, RoomLobby } from '../features/rooms/RoomPages'
 
 type CatalogueState =
   { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; games: GameSummary[] }
@@ -88,9 +89,13 @@ function Home({ state, retry }: { state: CatalogueState; retry: () => void }) {
             Step out of the daily agenda. Discover a new side of your teammates, one good question
             at a time.
           </p>
-          <a className="button" href="#games">
-            Find your next game <span aria-hidden="true">↗</span>
-          </a>
+          <div className="hero-actions">
+            <Link className="button" to="/host">
+              Host a room <span aria-hidden="true">↗</span>
+            </Link>
+            <Link to="/join">Join a room</Link>
+            <a href="#games">Explore the games</a>
+          </div>
           <p className="small-note">Five ways to connect. Plenty to talk about.</p>
         </div>
         <Tabletop />
@@ -129,8 +134,8 @@ function Home({ state, retry }: { state: CatalogueState; retry: () => void }) {
       <section className="coming-soon">
         <PeopleIcon className="people-icon" />
         <div>
-          <h2>The table is being set</h2>
-          <p>Room hosting is coming soon. For now, find a game your team will love.</p>
+          <h2>Your people, one room</h2>
+          <p>Create a room and invite your team. Playable games are coming next.</p>
         </div>
         <Link to="/how-to-play">
           How it will work <span aria-hidden="true">→</span>
@@ -172,8 +177,11 @@ function GameDetail({ state, retry }: { state: CatalogueState; retry: () => void
         <p>A facilitator keeps things moving. Share as much or as little as you like.</p>
       </div>
       <div className="availability">
-        <strong>Room hosting is coming soon</strong>
-        <p>Come back when the table is ready. No account will be needed to join.</p>
+        <strong>Gameplay is coming soon</strong>
+        <p>You can gather your team in a room now. No account is needed to join.</p>
+        <Link className="button" to="/host">
+          Host a room
+        </Link>
       </div>
     </section>
   )
@@ -189,7 +197,7 @@ function HowToPlay() {
         <br />
         Simple plans
       </h1>
-      <p className="page-intro">Room hosting is coming soon. Here's what to look forward to.</p>
+      <p className="page-intro">Create a room and invite your people. Gameplay is coming next.</p>
       <ol className="steps">
         <li>
           <span aria-hidden="true">01</span>
@@ -288,6 +296,9 @@ export function App() {
       </header>
       <main id="main" tabIndex={-1}>
         <Routes>
+          <Route path="/host" element={<RoomEntry create />} />
+          <Route path="/join" element={<RoomEntry create={false} />} />
+          <Route path="/rooms/:id" element={<RoomLobby />} />
           <Route path="/" element={<Home state={state} retry={retry} />} />
           <Route path="/games/:id" element={<GameDetail state={state} retry={retry} />} />
           <Route path="/how-to-play" element={<HowToPlay />} />

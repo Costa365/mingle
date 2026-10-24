@@ -52,7 +52,7 @@ describe('application shell', () => {
     expect(within(section).getAllByRole('link')).toHaveLength(5)
     await userEvent.click(within(section).getAllByRole('link')[0])
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('This or That')
-    expect(screen.getByText('Room hosting is coming soon')).toBeVisible()
+    expect(screen.getByText('Gameplay is coming soon')).toBeVisible()
   })
 
   it.each(games)('supports direct navigation to $name', async (game) => {
@@ -91,11 +91,11 @@ describe('application shell', () => {
     expect(screen.getByRole('heading', { name: /Make room/ })).toBeVisible()
   })
 
-  it('explains future hosting without offering nonfunctional room controls', async () => {
+  it('explains future gameplay and offers room hosting', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(games)))
     show('/how-to-play')
     expect(screen.getByRole('list').children).toHaveLength(3)
-    expect(screen.getByText(/Room hosting is coming soon/)).toBeVisible()
+    expect(screen.getByText(/Gameplay is coming next/)).toBeVisible()
     await userEvent.click(screen.getByRole('link', { name: /Explore the games/ }))
     expect(await screen.findByRole('heading', { name: 'This or That' })).toBeVisible()
   })

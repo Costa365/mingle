@@ -35,7 +35,7 @@ directory = pathlib.Path(sys.argv[1])
 def installation(name):
     with sqlite3.connect(directory / name) as db:
         assert db.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
-        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 1
+        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 2
         return db.execute('SELECT Id, InstanceId, CreatedUtc FROM Installations').fetchall()
 before, after = installation('before.db'), installation('after.db')
 assert len(before) == 1 and before == after, 'Persisted installation changed after recreation'
@@ -47,3 +47,11 @@ PY
 compose start --wait api
 PLAYWRIGHT_BASE_URL="http://127.0.0.1:$TEAMGAMES_PORT" \
 TEAMGAMES_TEST_COMPOSE_PROJECT="$project" npm --prefix web run test:e2e
+compose logs --no-color web > "$check_directory/web.log"
+python3 - "$check_directory/web.log" <<'PY'
+import pathlib, re, sys
+logs = pathlib.Path(sys.argv[1]).read_text()
+assert 'mingle-log-canary' not in logs, 'Request credentials leaked to proxy logs'
+assert not re.search(r'/hubs/rooms\?id=', logs), 'Hub transport tokens leaked to proxy logs'
+print('Invitation, Referer, and SignalR transport queries are excluded from proxy logs.')
+PY

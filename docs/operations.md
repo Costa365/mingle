@@ -1,10 +1,12 @@
-# Running the foundation
+# Running Mingle
 
 ## Current scope
 
-This milestone serves a public, read-only game catalogue. Rooms, authentication,
-SignalR subscriptions, administration, and gameplay arrive in later milestones.
-Do not treat the planned authorization architecture as already implemented.
+The catalogue, guest sessions, rooms, live lobbies, facilitator controls, and
+recovery are implemented. Playable games, prompts, and administration come later.
+Create a room at `/host` or join an invitation at `/join?code=ABC234` using the
+actual code shared by the host. Clearing cookies or changing devices loses that
+guest identity; transfer ownership before leaving if recovery might be needed.
 
 ## Local containers
 
@@ -17,12 +19,31 @@ Use `docker compose ps` for health status and `docker compose logs api web` for
 logs. `docker compose down` preserves data. Avoid `down --volumes` unless deleting
 that installation's data is intentional.
 
+Nginx access logs contain method, path, status, and byte count, excluding query
+strings, headers, and referrers. Request error logs are suppressed because their
+fixed format can expose invitation and SignalR token URLs; use sanitized access
+statuses, API logs, and health endpoints for diagnostics. Vite proxy diagnostics
+also redact queries. Do not enable raw request/header/body logging for rooms.
+
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `TEAMGAMES_PORT` | `8080` | Local Nginx host port, set via environment or `.env` |
 | `Storage__DataDirectory` | `.data` locally; `/data` in Compose | Directory holding `teamgames.db` and `keys/` |
 | `ASPNETCORE_ENVIRONMENT` | `Production` in Compose | OpenAPI is exposed only in Development |
 | `API_PROXY_TARGET` | `http://127.0.0.1:5100` | Vite development/preview proxy destination |
+| `Security__AllowInsecureCookies` | `false`; explicitly `true` in Development/local Compose | Permit cookies over local HTTP; production defaults require Secure cookies |
+| `Security__PublicOrigin` | Request scheme and host | Exact allowed browser origin when an external deployment origin is configured |
+| `Rooms__Capacity` | `20` | Maximum members including facilitator; accepted range 2–100 |
+| `Rooms__IdleHours` | `24` | Expiry since last accepted user activity; accepted range 1–168 |
+| `Rooms__RetentionHours` | `24` | Retain closed/expired room data before deletion; accepted range 1–168 |
+| `Rooms__GuestDays` | `7` | Absolute guest credential lifetime; accepted range 1–7 |
+| `Rooms__EntryRateLimit` | `90` per minute per API peer IP | Shared budget for session bootstrap, create, and join; use an explicit override for test traffic |
+
+For Docker, add ASP.NET settings under `api.environment` in a Compose override;
+host variables are not automatically passed into the container. `.env` currently
+supplies the published port. For `dotnet watch`, set these variables directly in
+its environment. Entry limits see the API peer address; shared-proxy traffic shares
+that budget until a trusted client-address forwarding profile is configured.
 
 Keep `.env`, databases, and key files out of Git. Docker's `app-data` volume is
 initialized with ownership for the API's non-root `app` user. A host bind mount
@@ -35,6 +56,13 @@ fails startup. One API process owns the database; do not scale API replicas.
 - `/api/health/ready` reports whether the initialized database is accessible.
   A failed readiness check returns HTTP 503 without storage details.
 - `/api/games` and `/api/games/{id}` serve catalogue information.
+- `/api/session` bootstraps antiforgery and guest identity; all JSON mutations
+  require `X-CSRF-TOKEN` and room mutations require the protected HttpOnly cookie.
+- `/api/rooms`, `/api/rooms/join`, `/api/rooms/{id}`, and the room's `/commands`
+  endpoint implement entry, snapshots, and authorized facilitator changes.
+- `/hubs/rooms` authenticates the guest and checks membership at subscription and
+  before every delivery. WebSocket origins are checked explicitly. Long Polling
+  is available; membership and ownership are independent of transport connections.
 - Nginx `/healthz` checks the frontend independently of the API.
 - Unknown API/hub URLs return API errors, never the SPA HTML shell. Frontend deep
   links load the SPA, which renders its own not-found screen for unknown pages.
@@ -46,13 +74,17 @@ requests. Browser security headers include a same-origin Content Security Policy
 
 ## CDN and HTTPS boundary
 
-For a public deployment, put an HTTPS reverse proxy or tunnel in front of the local
-Nginx port. Provider-specific TLS/domain configuration is outside M0. A CDN must
+The supplied Compose profile is for loopback HTTP and explicitly permits insecure
+local cookies. Production cookie defaults are Secure and are covered by HTTPS API
+tests. A public TLS edge profile and forwarded-header trust configuration are not
+supplied yet: complete and verify that deployment configuration before publishing
+rooms. Do not simply expose the local HTTP profile to the internet. A CDN must
 bypass caching for `/api/*` and `/hubs/*`, preserve cookies and WebSocket upgrade
 headers, and allow the frontend's static assets. The prepared realtime proxy uses
-100-second read/send timeouts; match these to the chosen provider during M1/M6.
-Forwarded-header trust and secure cookie behavior must be implemented and tested
-with authentication before exposing private rooms. There are no private rooms yet.
+100-second read/send timeouts; match these to the chosen provider during M6.
+Preserve the public Host including its port. Configure `Security__PublicOrigin`
+when TLS termination changes the origin seen by the API; HTTPS scheme forwarding
+must also be restricted to trusted proxies for Secure antiforgery cookies.
 
 ## Persistence, upgrades, and backups
 
@@ -70,6 +102,14 @@ Startup applies EF migrations. Review future migrations before upgrading; an
 older image is not automatically compatible with a newer schema. Keep the previous
 image and the matching data backup for rollback. A full operator backup/restore
 rehearsal is scheduled for M6; M0 verifies host/container restart persistence.
+
+M1 migration adds guests, rooms, memberships, and command receipts without changing
+the installation marker or key ring. An upgrade test starts from the M0 schema.
+Rooms expire after accepted-activity inactivity; pings, snapshots, and receipt
+replays do not extend them. A two-second startup/periodic maintenance loop marks
+expiry, ends live access, and deletes retained memberships/receipts with their room.
+Expired guest verifiers are deleted too. Existing members can read a terminal
+closed view until cleanup; new joins, subscriptions, and changes are blocked.
 
 ## Automated deployment verification
 

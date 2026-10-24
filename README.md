@@ -16,15 +16,16 @@ The facilitator controls the pace and can continue without waiting for everyone.
 
 ## Status
 
-The first implementation milestone, **M0 — Buildable foundation**, now includes
-the responsive five-game catalogue and detail pages, loading/error recovery,
-an ASP.NET Core 10 API, SQLite migrations, persistent Data Protection keys, and
-Docker Compose deployment. Unit, API functional, and desktop/mobile browser tests
-are included, along with a GitHub Actions workflow.
+The foundation and **M1 — Rooms, identity, and recovery** are implemented. You can
+host a room, invite teammates by link/code, join without an account, and see the
+live roster. Facilitators can lock joining, remove players, transfer ownership,
+and close the room. Reloads, duplicate tabs, and API restarts preserve membership
+and ownership. Room changes and retry receipts persist in SQLite.
 
-Room creation, guest identity, realtime gameplay, facilitator controls, and
-administration are **not implemented yet**. The interface labels hosting as coming
-soon. See the implementation plan for local verification and pending CI status.
+The five-game catalogue remains available. **Playable games, prompt management,
+and administration are not implemented yet**; This or That is next. Unit, API/hub
+functional, and desktop/mobile browser tests run in the CI workflow. See the
+implementation plan for verification results and the pending hosted CI gate.
 
 ## Run locally with Docker
 
@@ -55,9 +56,8 @@ For frontend/API development without Docker, follow the
 
 ## Next implementation target
 
-Build on the foundation with room creation, invitation, guest identity, and
-reconnect recovery. Deliver a complete **This or
-That** game before expanding to the remaining games. The first release includes
+Deliver a complete **This or That** game using the room and recovery foundation
+before expanding to the remaining games. The first release includes
 all five games, prompt management, administrator controls, and deployment docs.
 
 See the [implementation plan](docs/implementation-plan.md) for the full sequence.

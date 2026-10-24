@@ -42,3 +42,11 @@ status, headers, _ = get(asset)
 assert status == 200 and "immutable" in headers["Cache-Control"]
 assert get("/assets/missing.js")[0] == 404
 print("Proxy routing, health, API errors, SPA deep links, CSP, and cache headers passed.")
+
+# Synthetic canaries exercise both query-string and Referer redaction in logs.
+request = urllib.request.Request(base + "/join?code=mingle-log-canary", headers={
+    "Referer": base + "/join?code=mingle-log-canary"
+})
+with urllib.request.urlopen(request, timeout=10) as response:
+    assert response.status == 200
+assert get("/hubs/missing?id=mingle-log-canary")[0] == 404

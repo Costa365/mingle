@@ -28,8 +28,9 @@ npm --prefix web run dev
 ```
 
 Open http://localhost:5173. Vite forwards `/api` and `/hubs` to the API on port
-5100. SignalR hub implementation is deferred to M1; the route is prepared in the
-proxy. Development OpenAPI is available at http://localhost:5100/openapi/v1.json.
+5100. `/hubs/rooms` carries authorized lobby snapshots. Development OpenAPI is
+available at http://localhost:5100/openapi/v1.json. The Development configuration
+explicitly allows local HTTP cookies; production defaults require Secure cookies.
 Local data defaults to `server/TeamGames.Api/.data/`, which is ignored by Git.
 Set `Storage__DataDirectory` to a different directory when needed.
 
@@ -41,6 +42,8 @@ Set `Storage__DataDirectory` to a different directory when needed.
 | Build backend | `dotnet build TeamGames.slnx --no-restore --disable-build-servers -m:1` |
 | Backend unit and API functional tests | `dotnet test TeamGames.slnx --no-build --disable-build-servers -m:1` |
 | Backend format check | `dotnet format TeamGames.slnx --verify-no-changes --no-restore` |
+| Generate room transport types | `dotnet run --project tools/TeamGames.Contracts` |
+| Check generated types after building | `dotnet run --project tools/TeamGames.Contracts --no-build -- --check` |
 | Install frontend | `npm --prefix web ci` |
 | Type check | `npm --prefix web run typecheck` |
 | Lint | `npm --prefix web run lint` |
@@ -90,10 +93,25 @@ Startup applies migrations before listening and creates the installation marker
 once. Readiness checks query that marker; liveness is independent of storage.
 Tests use real temporary SQLite files and exercise a complete host restart.
 
-The initial `/api/games` JSON contract is represented by `GameSummary` in C# and
-TypeScript, validated at the client boundary, and exercised by API and real-browser
-tests. Generated HTTP types and a separate hub protocol contract will be added
-with room commands in M1; no SignalR contract is claimed as implemented yet.
+The `/api/games` contract remains represented by `GameSummary` in C# and TypeScript.
+Room request/response and hub snapshot interfaces are generated from the public
+Core DTOs into `web/src/api/room-contract.generated.ts`. Regenerate after changing
+those DTOs; `verify.sh` rejects stale output. The client validates snapshots at
+runtime too. `Snapshot` carries protocol version 1; `AccessEnded` carries only an
+access error code. Real HTTP/hub tests and browser flows verify the wire behavior.
+
+Room commands use a caller-generated UUID and expected room version. An ambiguous
+network failure must reuse that UUID and payload. Entry forms retain their pending
+UUID in session storage across reloads; a failed lobby change offers a dedicated
+retry. A version conflict refreshes the room and requires a new deliberate action.
+Receipts store the applied version; retries return it alongside a fresh authorized
+snapshot. The client never replaces a newer snapshot with an older one.
+
+Transient presence has a separate revision and process epoch. A successful
+resubscription plus HTTP resync accepts a new epoch after restart; ordinary old
+events do not. Five seconds of disconnect grace avoids flickering duplicate-tab
+presence. Reconciliation runs roughly every 15 seconds. Initial connection and
+automatic reconnect retry with bounded backoff; manual retry remains available.
 
 ## CI
 

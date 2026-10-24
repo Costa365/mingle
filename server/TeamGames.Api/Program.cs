@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TeamGames.Api.Health;
+using TeamGames.Api.Rooms;
 using TeamGames.Core.Games;
 using TeamGames.Core.Storage;
 using TeamGames.Infrastructure.Persistence;
@@ -37,6 +38,7 @@ builder.Services.AddOptions<KeyManagementOptions>().Configure<StoragePaths, ILog
 builder.Services.AddHealthChecks().AddCheck<StorageHealthCheck>("storage", tags: ["ready"]);
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.AddRooms();
 
 var app = builder.Build();
 app.UseExceptionHandler();
@@ -47,6 +49,7 @@ app.Use(async (context, next) =>
     context.Response.Headers.XContentTypeOptions = "nosniff";
     await next(context);
 });
+app.UseRoomSecurity();
 
 if (app.Environment.IsDevelopment())
 {
@@ -54,6 +57,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/api/games", (GameCatalog catalog) => catalog.Games);
+app.MapRooms();
 app.MapGet("/api/games/{id}", (string id, GameCatalog catalog) =>
     catalog.Find(id) is { } game ? Results.Ok(game) : Results.NotFound());
 

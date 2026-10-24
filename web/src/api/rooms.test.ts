@@ -1,0 +1,56 @@
+import { describe, expect, it, vi } from 'vitest'
+import { newerSnapshot, parseSnapshot } from './rooms'
+import { room } from '../test/room'
+
+describe('room transport and ordering', () => {
+  it('accepts the explicit server snapshot contract', () =>
+    expect(parseSnapshot(room)).toEqual(room))
+  it.each([
+    null,
+    {},
+    { ...room, protocolVersion: 2 },
+    { ...room, code: 234567 },
+    { ...room, version: -1 },
+    { ...room, participants: [room.participants[0], room.participants[0]] },
+    { ...room, youId: 'bad' },
+    { ...room, allowedActions: ['admin'] },
+  ])('rejects incompatible room views %j', (value) => {
+    expect(() => parseSnapshot(value)).toThrow('could not be read')
+  })
+  it('never rolls back durable state and orders transient presence separately', () => {
+    expect(newerSnapshot(room, { ...room, version: 1, presenceRevision: 100 })).toBe(room)
+    expect(newerSnapshot(room, { ...room, presenceRevision: 0 })).toBe(room)
+    expect(newerSnapshot(room, { ...room, version: 3, presenceRevision: 0 }).version).toBe(3)
+    expect(newerSnapshot(null, room)).toBe(room)
+  })
+  it('accepts a new server presence epoch only after authoritative resynchronization', () => {
+    const restarted = { ...room, presenceEpoch: crypto.randomUUID(), presenceRevision: 0 }
+    expect(newerSnapshot(room, restarted)).toBe(room)
+    expect(newerSnapshot(room, restarted, true)).toBe(restarted)
+    expect(newerSnapshot(room, { ...restarted, version: 1 }, true)).toBe(room)
+  })
+  it('refreshes antiforgery without changing a retried command', async () => {
+    vi.resetModules()
+    const { commandRoom } = await import('./rooms')
+    const fetchMock = vi.fn()
+    for (const response of [
+      Response.json({ requestToken: 'anonymous' }),
+      Response.json({ requestToken: 'guest' }),
+      Response.json({ code: 'csrf_invalid', message: 'Refresh' }, { status: 400 }),
+      Response.json({ requestToken: 'anonymous-new' }),
+      Response.json({ requestToken: 'guest-new' }),
+      Response.json({ snapshot: room, appliedVersion: room.version, replayed: true }),
+    ])
+      fetchMock.mockResolvedValueOnce(response)
+    vi.stubGlobal('fetch', fetchMock)
+    const command = {
+      commandId: crypto.randomUUID(),
+      expectedVersion: room.version,
+      action: 'lock',
+      locked: true,
+    }
+    expect((await commandRoom(room.id, command)).replayed).toBe(true)
+    expect(fetchMock.mock.calls[2][1].body).toBe(fetchMock.mock.calls[5][1].body)
+    expect(fetchMock.mock.calls[5][1].headers['X-CSRF-TOKEN']).toBe('guest-new')
+  })
+})

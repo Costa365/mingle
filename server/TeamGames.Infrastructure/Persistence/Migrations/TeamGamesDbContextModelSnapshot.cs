@@ -17,6 +17,79 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("TeamGames.Core.Rooms.Membership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GuestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Removed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId", "GuestId")
+                        .IsUnique();
+
+                    b.HasIndex("RoomId", "NormalizedName")
+                        .IsUnique()
+                        .HasFilter("\"Removed\" = 0");
+
+                    b.ToTable("Memberships");
+                });
+
+            modelBuilder.Entity("TeamGames.Core.Rooms.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ClosedTicks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FacilitatorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("JoinLocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LastActivityTicks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Rooms");
+                });
+
             modelBuilder.Entity("TeamGames.Infrastructure.Persistence.Installation", b =>
                 {
                     b.Property<int>("Id")
@@ -31,6 +104,72 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Installations", (string)null);
+                });
+
+            modelBuilder.Entity("TeamGames.Infrastructure.Rooms.CommandReceipt", b =>
+                {
+                    b.Property<Guid>("GuestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CommandId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AppliedVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GuestId", "CommandId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("Receipts");
+                });
+
+            modelBuilder.Entity("TeamGames.Infrastructure.Rooms.GuestSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresTicks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Verifier")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Guests");
+                });
+
+            modelBuilder.Entity("TeamGames.Core.Rooms.Membership", b =>
+                {
+                    b.HasOne("TeamGames.Core.Rooms.Room", null)
+                        .WithMany("Members")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeamGames.Infrastructure.Rooms.CommandReceipt", b =>
+                {
+                    b.HasOne("TeamGames.Core.Rooms.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeamGames.Core.Rooms.Room", b =>
+                {
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

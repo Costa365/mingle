@@ -4,10 +4,11 @@
 
 Deliver the application in [product.md](product.md) using the proposed
 [architecture](architecture.md). This plan was initialized on 2026-10-23 from
-[idea.md](../idea.md). The first stage, **M0 — Buildable foundation**, is implemented
-and locally verified. It includes a public catalogue and game
-instructions, not playable rooms. M1–M6 remain unimplemented. M0's hosted CI gate
-is pending because this repository has no Git remote configured.
+[idea.md](../idea.md). **M0 — Buildable foundation** and **M1 — Rooms, identity,
+and recovery foundation** are implemented and locally verified. Teams can create
+and join rooms, manage a live lobby, and recover membership after reload or API
+restart. M2–M6 remain unimplemented; playable games start with M2. Hosted CI gates
+remain pending because this repository has no Git remote configured.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -38,7 +39,7 @@ M0 acceptance coverage (paths are relative to the repository root):
 | --- | --- | --- | --- |
 | People icon replaces all star marks; wordmark reads "Mingle" with the tagline "Team games"; headings contain no full stops | `web/src/app/App.test.tsx`: brand name/tagline, decorative icon semantics, punctuation on home/how-to/not-found/detail and error headings | `web/e2e/foundation.spec.ts`: loaded icons, exact brand/tagline and Mingle browser titles, punctuation across routes and error state, both viewports, axe and keyboard checks | 27 frontend unit tests and 20 browser cases pass locally; build/lint/format pass; screenshots reviewed; hosted CI pending |
 | All five catalogue entries have valid metadata; exact IDs resolve and unknown IDs fail | `tests/TeamGames.Core.Tests/GameCatalogTests.cs`: metadata, uniqueness, exact/unknown IDs; `web/src/api/games.test.ts`: malformed/duplicate payloads and request failures | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: catalogue and every detail through HTTP; `web/e2e/foundation.spec.ts`: all five detail flows | Local .NET and frontend suites pass; hosted CI pending |
-| Home, detail, how-to, and not-found routes render and allow navigation; hosting is clearly unavailable | `web/src/app/App.test.tsx`: each detail route, navigation, instructions, recovery links, future-hosting explanation | `web/e2e/foundation.spec.ts`: each route through the real backend, direct loads and reloads, desktop/mobile | Browser results recorded below; hosted CI pending |
+| Home, detail, how-to, and not-found routes render and allow navigation; gameplay availability is clear | `web/src/app/App.test.tsx`: each detail route, navigation, instructions, recovery links, room hosting and future-gameplay explanation | `web/e2e/foundation.spec.ts`: each route through the real backend, direct loads and reloads, desktop/mobile | Browser results recorded below; hosted CI pending |
 | Loading is announced; an API failure offers retry and recovers | `web/src/app/App.test.tsx`: pending request, cancellation, error/retry on home and detail; `web/src/api/games.test.ts`: rejected/invalid responses | `web/e2e/foundation.spec.ts`: delayed real request and real API stop/restart/retry in both viewports | Browser results recorded below; hosted CI pending |
 | Storage paths are validated; fresh SQLite is migrated; readiness reflects storage while liveness remains independent | `tests/TeamGames.Core.Tests/StoragePathsTests.cs`: relative/absolute/invalid paths; `tests/TeamGames.Api.Tests/StorageHealthCheckTests.cs`: success, failure, sanitized exceptions, cancellation | `tests/TeamGames.Api.Tests/FoundationFunctionalTests.cs`: migration, dropped storage table, invalid/unwritable configuration | Local .NET suites pass; hosted CI pending |
 | Database identity and Data Protection keys survive host/container recreation | Storage path and readiness unit cases above cover persistence configuration and failure reporting | `FoundationFunctionalTests.cs`: fresh host restores installation and decrypts a protected value; `scripts/verify-compose.sh`: recreates API and compares database, migrations, WAL mode, and key ring | Container persistence checks pass; hosted CI pending |
@@ -75,6 +76,26 @@ recreation. No placeholder test is counted as evidence of gameplay.
 ## M1 — Rooms, identity, and recovery foundation
 
 Depends on M0.
+
+**Status:** All items below are implemented and locally verified. Checkboxes remain
+pending the required hosted CI run, consistent with the definition of done.
+`bash scripts/verify.sh` passes **47 backend unit tests, 16 API/hub functional tests,
+and 65 frontend unit/component tests** plus build, type checking, lint, formatting,
+generated-contract drift checking, and Compose validation. The final isolated
+`bash scripts/verify-compose.sh` passes deployment/persistence assertions and all
+**30 browser cases** through Nginx on desktop and 360px mobile (1.2 minutes for the
+browser suite). No required tests were skipped.
+
+| Feature / acceptance criteria | Unit coverage | Functional coverage | Evidence / remaining gate |
+| --- | --- | --- | --- |
+| Protected guest identity; validated names/codes; case-insensitive uniqueness, capacity, and entry limits | `RoomRulesTests.cs`: names, Unicode normalization, codes, capacity, lock/rejoin/removal; `RoomBoundaryTests.cs`: same-origin and upgrade checks; `RoomPages.test.tsx`: both entry forms, server errors and safe retry | `RoomFunctionalTests.cs`: real cookies/antiforgery for every mutation, forged/expired sessions, HTTPS Secure cookies, input/capacity/rate limits, duplicate create/join; `rooms.spec.ts`: create, invite join, duplicate-name error, reload and duplicate tab | Both layers pass locally; hosted CI pending |
+| Invite link/code copying, roster, facilitator controls, closure confirmation, and room isolation | `RoomRulesTests.cs`: every control's permission/target/version rules; `RoomPages.test.tsx`: lock/unlock/remove/transfer, copy/failure, confirmation/cancel, role-specific controls and terminal views | `RoomFunctionalTests.cs`: unauthorized controls/read, stale versions, ownership changes, removed access, closed room behavior; `rooms.spec.ts`: both clipboard actions, lock/unlock, removal, transfer, closed-room fanout, cross-room access, keyboard Escape/focus restoration | Both layers pass; desktop/mobile screenshots reviewed and axe checks pass; hosted CI pending |
+| Authorized live subscription and unique-person presence across tabs | `RoomBoundaryTests.cs`: tab counts, stale disconnect and timed grace; `rooms.test.ts`: snapshot validation and ordering | `RoomFunctionalTests.cs`: real SignalR Long Polling, rejected outsider subscription, live roster, tab count, removal revocation and rejected closed subscription; browser tests verify independent live participants and duplicate tabs | Both layers pass locally; hosted CI pending |
+| Transactions persist before notification; UUID retries deduplicate and reject payload reuse | `RoomRulesTests.cs`: monotonic versions/conflicts; `RoomPages.test.tsx` and `rooms.test.ts`: stable retry UUIDs and antiforgery refresh | `RoomFunctionalTests.cs`: concurrent duplicate commands, payload mismatch, role/membership rechecks and retained receipts after restart; `rooms.spec.ts`: lost create acknowledgment, reload, retry; lost control acknowledgment changes version once | Both layers pass locally; hosted CI pending |
+| Initial retry, reconnect/resubscribe/resync, manual recovery, stale-view rejection, and periodic reconciliation | `useRoom.test.tsx`: handler registration, initial retry, reconnect, out-of-order state, periodic polling, disposal, expiry and terminal closure; `rooms.test.ts`: independent presence epoch/version ordering; `RoomPages.test.tsx`: recovery controls | `RoomFunctionalTests.cs`: complete host restart preserves cookies, ownership and receipts; `rooms.spec.ts`: real API outage disables controls, restart reconnects both browsers with unchanged membership/ownership/version | Both layers pass locally and through Compose; hosted CI pending |
+| Expiry and retained-data cleanup revoke live access and delete dependent data; migration preserves existing installation | `RoomRulesTests.cs`: exact inactivity boundary and closure; `RoomBoundaryTests.cs`: timed presence grace; hook/lobby tests: access-ended view | `RoomFunctionalTests.cs`: fake-time HTTP/hub expiry, guest expiry, cascade removal of rooms/memberships/receipts, upgrade from M0 SQLite schema; browser removal exercises the access-ended UI | Both layers pass locally; hosted CI pending |
+| Explicit HTTP/hub DTOs match client types; credentials remain private | `rooms.test.ts`: valid/malformed protocol and snapshots; generated DTO drift check in `verify.sh` | Real API/hub serialization asserts no guest IDs, verifiers or receipts in views; all browser flows consume actual generated/validated snapshots through the API | Both layers and contract check pass; hosted CI pending |
+| Invitation codes, referrers, and transport tokens stay out of proxy diagnostics | `logs.test.ts`: redaction of invite, hub, and referrer queries in development diagnostics | `check-deployment.py` sends query/referrer canaries; `verify-compose.sh` scans actual Nginx logs after all browser/outage flows for canaries and hub-token URLs | Both layers and the real proxy-log scan pass; hosted CI pending |
 
 - [ ] Implement guest credentials, antiforgery handling, memberships, facilitator
   assignment, and room creation/joining with input limits and rate limits.
@@ -221,6 +242,27 @@ test or acceptance failure prevents release completion and is recorded explicitl
 
 ## Progress and evidence
 
+- 2026-10-24: Implemented M1 rooms, guest credentials, facilitator controls,
+  authenticated SignalR subscriptions, transient presence, durable receipts,
+  expiration/cleanup, generated client contracts, and recovery UI. Required local
+  verification passes with 63 backend tests, 65 frontend tests, and 30 browser
+  cases through Docker. The Compose test project and its volume were removed after
+  success. M1's feature-by-feature acceptance record appears above.
+- Reviewed desktop and 360px lobby screenshots; automated scans found no axe
+  violations. Browser tests cover invite clipboard behavior and keyboard focus/
+  Escape when canceling room closure. Guest cookies and memberships survive API
+  restart; the new SQLite migration preserves the M0 installation marker.
+- Retry regression coverage includes a real committed room change followed by a
+  simulated gateway error: the original UUID remains available and a retry does
+  not apply the change twice. Nginx request diagnostics exclude query strings and
+  referrers; request error logging is suppressed because its fixed format can
+  expose transport-token URLs. Development proxy diagnostics redact queries too.
+- The existing local preview was upgraded after stopping the API and backing up
+  its complete data directory outside the repository. Both containers are healthy.
+- Hosted CI remains unexecuted because no Git remote is configured. The supplied
+  Compose profile remains local HTTP; public TLS/forwarded-proxy configuration and
+  provider rehearsal remain deployment work for M6. Gameplay remains M2–M4.
+
 - 2026-10-23: Read the original brief and inspected the workspace. Added repository
   guidance, product requirements, architecture, development notes, and this plan.
   Verified tooling is present; no application exists to build or test.
@@ -288,6 +330,12 @@ test or acceptance failure prevents release completion and is recorded explicitl
 | 2026-10-23 | Keep SQLite and Data Protection keys in one `app-data` volume | Preserve them together across recreation and future backups; one API process only |
 | 2026-10-23 | Self-host fonts and use CSS/SVG artwork | Same-origin assets work with the restrictive CSP and need no third-party runtime requests |
 | 2026-10-23 | Browser tests own temporary API state and stop the real API for retry coverage | Verify observable recovery without a mocked backend; Compose tests delete only their isolated project/volume |
+| 2026-10-24 | One SQLite writer gate shared by room commands, guest creation and maintenance | Avoid cross-room SQLite write contention on the required single process; measure capacity before changing coordination |
+| 2026-10-24 | Receipts unique per guest/command ID, with request fingerprint and applied version | Deduplicate creation before a room ID is known; return current authorized state alongside the original applied version |
+| 2026-10-24 | Presence revision plus process epoch | A persisted room version can stay unchanged across restart while all connections change; authoritative resync accepts the new epoch |
+| 2026-10-24 | Closure ends live subscriptions but preserves a terminal read for existing members until cleanup | Make reload and lost-ack recovery clear; prohibit new joins, new subscriptions and state changes |
+| 2026-10-24 | Generate HTTP/hub TypeScript interfaces directly from public Core DTOs | Prevent drift without exporting persistence entities or credentials; keep runtime protocol validation and real transport tests |
+| 2026-10-24 | Entry budget 90/minute per API peer IP; local insecure cookies require an explicit override | Accommodate a small team joining behind one proxy/network while retaining a bounded entry rate; public deployment needs TLS/proxy configuration |
 
 ## Open refinements
 

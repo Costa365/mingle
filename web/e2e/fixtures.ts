@@ -47,6 +47,7 @@ export const test = base.extend<object, { backend: Backend }>({
                   ASPNETCORE_URLS: 'http://127.0.0.1:5101',
                   ASPNETCORE_ENVIRONMENT: 'Production',
                   Storage__DataDirectory: directory,
+                  Security__AllowInsecureCookies: 'true',
                 },
                 stdio: ['ignore', 'pipe', 'pipe'],
               },

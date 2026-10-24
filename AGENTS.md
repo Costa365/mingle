@@ -6,10 +6,10 @@ Build an account-free remote team games application from [idea.md](idea.md).
 The required stack is React and ASP.NET Core on .NET 10, deployed on one host
 with Docker Compose. Support all five requested games and future game modules.
 
-The first foundation milestone is implemented: React catalogue pages, an ASP.NET
-API, SQLite initialization, Docker Compose, and automated tests. Room hosting,
-identity, realtime gameplay, and administration are still planned. Consult the
-implementation plan for verification status; do not describe unexecuted checks or
+The foundation and M1 room lifecycle are implemented: catalogue, create/join/lobby,
+guest cookies, facilitator controls, authorized SignalR updates, durable receipts,
+expiry, and recovery. Playable games, prompts, and administration are still planned.
+Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
 
 ## Where to look

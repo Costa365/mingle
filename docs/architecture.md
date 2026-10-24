@@ -1,9 +1,10 @@
 # Proposed architecture
 
-Status: foundation implemented on 2026-10-23. The catalogue, health endpoints,
-SQLite initialization, protected key persistence, frontend routes, and container
-proxy exist. Identity, room commands, SignalR subscriptions, and game modules
-below describe the next milestones. See the implementation plan for test evidence.
+Status: foundation and M1 room lifecycle implemented by 2026-10-24. The catalogue,
+guest identity, create/join/lobby, facilitator controls, authorized SignalR
+subscriptions, durable command receipts, expiry, and reconnect recovery exist.
+Game sessions, rounds, prompts, and administration below describe future milestones.
+See the implementation plan for test evidence and the pending hosted CI gate.
 
 ## Components and decisions
 
@@ -36,22 +37,23 @@ the application. [React documentation](https://react.dev/learn/build-a-react-app
 ```text
 TeamGames.slnx
 server/
-  TeamGames.Api/               # HTTP endpoints/composition; hub and auth planned
-  TeamGames.Core/              # Catalogue/storage contracts; room/game rules planned
+  TeamGames.Api/               # HTTP endpoints, guest authentication, room hub
+  TeamGames.Core/              # Catalogue, room rules and public DTOs; games planned
   TeamGames.Infrastructure/    # EF Core, migrations, persistence implementations
 web/
   src/
     app/                      # Routing and application shell
-    features/                 # Planned: rooms, facilitation, prompts, administration
+    features/rooms/           # Entry forms and live lobby; other features planned
     games/                    # Planned: registry and game-specific views
-    realtime/                 # Planned: connection lifecycle and reconciliation
+    realtime/                 # Connection lifecycle and snapshot reconciliation
     api/                      # Typed API client and transport contracts
     ui/                       # Shared accessible components and design tokens
-  e2e/                        # Playwright; multi-participant scenarios planned
+  e2e/                        # Playwright catalogue and independent room browsers
 tests/
   TeamGames.Core.Tests/
   TeamGames.Api.Tests/
 infra/                        # Proxy and container configuration
+tools/TeamGames.Contracts/     # Generates/checks TypeScript from public room DTOs
 docs/
 compose.yaml
 ```
@@ -88,7 +90,8 @@ advance, zero answers, passes, removed players, and invalid/stale commands.
 
 - Create a cryptographically random guest session on first create/join. Store its
   verifier server-side and place the credential in an HttpOnly, Secure,
-  SameSite=Lax cookie in production. Allow local HTTP cookies only in development.
+  SameSite=Lax cookie in production. Local HTTP requires an explicit override;
+  Development and the loopback-only Compose profile enable that override.
   One guest can hold memberships in multiple rooms; use one membership per room.
 - Creating a room assigns its creator the facilitator role. All endpoints resolve
   the actor from the cookie and current membership, never a supplied player ID.
@@ -101,7 +104,10 @@ advance, zero answers, passes, removed players, and invalid/stale commands.
   upgrades; same-origin deployment is the default. Escape all player/prompt text.
 - Authenticate the hub and authorize room subscriptions on every connection.
   Recheck current membership before delivering a private view. Removal/closure
-  revokes subscriptions and future requests, including already connected clients.
+  revokes access, including existing connections. Closure delivers a final view,
+  ends live subscriptions, and blocks new subscriptions/joins/mutations. Existing
+  members may read the terminal closed view or retry their own acknowledged
+  command until retention cleanup; this makes reload/lost-ack recovery explicit.
 - Keep an administrator credential in environment/secret configuration, fail
   closed when absent, and exchange it for a short-lived separate admin cookie.
   Use framework credential protection and rate limiting; never embed the secret
@@ -122,15 +128,22 @@ commands independently retryable when sockets are interrupted.
 Planned endpoint groups are `/api/rooms` (create/join/read), room membership and
 facilitator actions, game sessions/round responses, prompt browsing/management,
 and `/api/admin` (authentication and operations). Publish an OpenAPI contract and
-generate/check TypeScript HTTP types. Define and verify the hub envelope alongside
-it; OpenAPI generation alone does not cover SignalR events.
+generate/check TypeScript HTTP types. M1 generates shared HTTP/hub DTO interfaces
+directly from the public Core records and checks them in CI. Runtime validation
+checks protocol version 1. `Snapshot` carries the view; `AccessEnded` carries an
+error code and is followed by disconnect. OpenAPI alone does not cover hub events.
 
 Every mutation carries a unique command ID. Round commands also carry a round ID
-and stage revision. Under a per-room asynchronous lock, the server:
+and stage revision. M1 uses one asynchronous writer gate for short SQLite
+transactions across all rooms (including guest creation and maintenance). No
+notification is sent under it. This avoids cross-room SQLite write contention on
+the single API process; revisit after the M6 capacity measurements. The server:
 
 1. Authenticates the actor and checks current room access.
 2. Looks up the command receipt scoped to actor and room. A matching retry returns
-   its prior outcome; a reused ID with a different payload is rejected.
+   its applied version alongside a current authorized snapshot; a reused ID with
+   a different payload is rejected. M1 IDs are unique per guest across rooms, so
+   create requests can also be deduplicated before a room ID is known.
 3. Checks the action, round, stage, eligibility, and input limits.
 4. Applies the transition and commits state, an increasing room version, and the
    receipt in one database transaction.
@@ -160,7 +173,9 @@ Register handlers before starting SignalR. After connecting, authorize/subscribe
 first, then fetch a full snapshot. Accept only newer room versions from either
 path, so a slower HTTP response cannot overwrite a newer event. Repeat this
 process after reconnect, tab wake, or transport fallback. Use a separate transient
-presence revision so connection changes need not write gameplay transactions.
+presence revision and process epoch so connection changes need not write gameplay
+transactions. Subscribe plus HTTP resync accepts a new epoch after restart;
+ordinary old events cannot replace it.
 
 SignalR automatic reconnect is opt-in, and initial start failures need their own
 retry loop. Configure both with exponential backoff, jitter, and cancellation;
@@ -194,7 +209,7 @@ local drafts until they can be reconciled against the current stage.
 ## Persistence and operations
 
 SQLite is the durable source of truth. Keep transactions short, enable WAL mode,
-set a bounded busy timeout, and serialize commands per room. Use an
+set a bounded busy timeout, and serialize writes through the single-process gate. Use an
 application-managed concurrency field: the EF SQLite provider does not support
 database-generated concurrency tokens. Test migrations against real SQLite.
 [EF Core SQLite limitations](https://learn.microsoft.com/en-us/ef/core/providers/sqlite/limitations)
