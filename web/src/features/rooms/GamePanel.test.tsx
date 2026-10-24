@@ -129,11 +129,18 @@ describe('game controls', () => {
           missing: 2,
           percentA: 100,
           percentB: 0,
+          choices: [
+            { participantId: snapshot.youId, name: 'Host', choice: 'a' },
+            { participantId: snapshot.participants[1].id, name: 'Player', choice: 'pass' },
+          ],
         },
       ],
     })
-    expect(screen.getByText('Tea: 1 votes (100%)')).toBeInTheDocument()
+    expect(screen.getByText('Tea: 1 vote (100%)')).toBeInTheDocument()
     expect(screen.getByText('1 passed · 2 unanswered')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Player choices for round 1' })).toHaveTextContent(
+      'HostTeaPlayerPassed',
+    )
     expect(screen.getByRole('button', { name: 'Return to lobby' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Tea' })).not.toBeInTheDocument()
   })
@@ -166,6 +173,7 @@ describe('game controls', () => {
             missing: 2,
             percentA: 0,
             percentB: 0,
+            choices: [],
           },
         ],
       },

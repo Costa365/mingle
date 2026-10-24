@@ -66,7 +66,9 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         var passes = skipped ? 0 : answers.Count(c => c == "pass");
         var percent = a + b == 0 ? 0 : (int)Math.Round(100.0 * a / (a + b), MidpointRounding.AwayFromZero);
         state.Results.Add(new(state.RoundId, state.Used.Count, "Which would you choose?", state.OptionA, state.OptionB,
-            skipped, a, b, passes, eligible.Length - a - b - passes, percent, a + b == 0 ? 0 : 100 - percent));
+            skipped, a, b, passes, eligible.Length - a - b - passes, percent, a + b == 0 ? 0 : 100 - percent,
+            skipped ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
+                state.Answers.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray()));
     }
     public string Apply(string json, Room room, Membership actor, GameCommand command)
     {
@@ -122,6 +124,11 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         }
         return new(session.Id, Id, state.RoundId, state.Used.Count, state.Revision, state.Stage,
             "Which would you choose?", state.OptionA, state.OptionB, eligible.Length, eligible.Count(state.Answers.ContainsKey),
-            eligible.Contains(viewer.Id), own?.Choice, own?.Revision ?? 0, actions, state.Results.ToArray());
+            eligible.Contains(viewer.Id), own?.Choice, own?.Revision ?? 0, actions,
+            state.Results.Select(result => result with
+            {
+                Choices = (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
+                    ? choice : choice with { Name = "Removed player" }).ToArray()
+            }).ToArray());
     }
 }

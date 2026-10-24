@@ -64,7 +64,7 @@ punctuation. This presentation preference applies to future screens too.
 
 | Game | Stages and input | Reveal and completion |
 | --- | --- | --- |
-| This or That | Facilitator selects or randomly draws a pair; players choose A, B, or pass | Show totals and percentages for valid votes; facilitator starts next round or ends |
+| This or That | Facilitator selects or randomly draws a pair; players choose A, B, or pass | After reveal, show each player’s named choice alongside totals and percentages for valid votes; facilitator starts next round or ends |
 | Would You Rather? | Same binary response mechanic, with a dilemma-style prompt and two options | Same aggregate reveal; keep its own content and presentation |
 | Never Have I Ever | Show a statement; players choose “I have,” “I haven't,” or pass | Show aggregate counts; no drinking rules or elimination |
 | Most Likely To | Show a prompt; each player nominates one other eligible participant or passes | Show nomination counts and joint winners on a tie; voters remain unattributed |
@@ -145,3 +145,13 @@ status inspection does not expose hidden answers or grant gameplay impersonation
   ownership. Multi-host operation and automatic failover are future work.
 - CDN provider, final brand, exact capacity, and default retention can be refined
   during implementation; none blocks the first local slice.
+
+### This or That reveal refinement — 2026-10-24
+
+To encourage conversation, revealed rounds show each eligible player's name and
+choice, including separate Passed and No answer labels. Current-round choices
+remain private until the facilitator reveals. Skipped or unfinished rounds do
+not publish individual choices. Removed participants are excluded before reveal;
+removal afterward preserves their finalized vote with a neutral Removed player
+label. Older aggregate-only results remain readable without reconstructing names
+or choices that were not recorded for public reveal.

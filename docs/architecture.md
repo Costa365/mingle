@@ -87,11 +87,14 @@ or random values. It returns a new state or a domain error. It must handle force
 advance, zero answers, passes, removed players, and invalid/stale commands.
 
 M2 implements `IGameModule` / `GameModules` with deterministic injected random
-selection and the This or That module. `Rooms.GameState` is a version 1 JSON
+selection and the This or That module. `Rooms.GameState` is a version 2 JSON
 envelope of sessions; each module owns its state representation. Completed rounds
 retain prompt text, roster and submissions separately from their immutable public
-aggregate results. Keep old state readable with an explicit migration when its
-schema or prompt identifiers change. Room deletion cascades by deleting this
+results. Version 1 aggregate-only results are read with empty named-choice lists;
+new revealed rounds snapshot each eligible player’s choice, and projection replaces
+removed participants’ names with a neutral label. The envelope advances to version
+2 on the next accepted mutation. Keep old state readable with an explicit migration
+when its schema or prompt identifiers change. Room deletion cascades by deleting this
 owned state with the room. No runtime type names are deserialized.
 
 The additive `game` DTO contains only the current viewer's answer/revision,

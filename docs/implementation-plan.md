@@ -11,6 +11,7 @@ rooms, play multiple rounds, manage their gathering, and recover membership and
 private game state after API restart. M2 passed the
 [required GitHub check](https://github.com/Costa365/mingle/actions/runs/40114848655)
 on implementation commit `e17c185`. M3–M6 remain unimplemented; M3 is next.
+A requested refinement to show named choices after reveal is in progress and needs new verification before M2 closes.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -123,25 +124,26 @@ Depends on M1. This is the first playable vertical slice.
 - [x] Define the game module/registry contract and the shared round command model.
 - [x] Implement responding, pass/change answer, reveal, skip, next round, finish,
   and return-to-lobby behavior with a small reviewed prompt seed.
-- [x] Add separate stage/response revisions, deduplication, frozen round rosters,
+- [ ] Add separate stage/response revisions, deduplication, frozen round rosters,
   per-viewer projections, and finalized results.
-- [x] Build facilitator controls and player answer/reveal screens with visible
+- [ ] Build facilitator controls and player answer/reveal screens with visible
   response counts and clear unavailable actions.
-- [x] Add unit and functional tests for every game action and UI state, including
+- [ ] Add unit and functional tests for every game action and UI state, including
   rules, authorization, concurrent commands, hidden state, and browser flows.
 
 **Acceptance:** One facilitator and at least two players finish multiple rounds.
 The facilitator advances with absent or disconnected players, including zero
 answers. Double-clicks/retries cannot advance twice. Simultaneous valid player
 answers succeed. A stale answer after reveal fails clearly. Choices stay private
-until reveal. API restart restores the exact last acknowledged stage and answers.
+until reveal, when each player’s choice is shown with their name. API restart restores the exact last acknowledged stage and answers.
 
 ### M2 implementation and verification — 2026-10-24
 
 This or That is implemented with 12 reviewed seed pairs and a server module
-registry. All five M2 checklist items are complete: both test layers passed
+registry. The original aggregate-result implementation passed both test layers
 locally and in the [hosted verification run](https://github.com/Costa365/mingle/actions/runs/40114848655)
-for `e17c185`.
+for `e17c185`. Named choices after reveal are now being added at the user’s
+request; the affected projection, UI, and test items are reopened until verified.
 
 Verification evidence:
 
@@ -172,6 +174,14 @@ Verification evidence:
 | Preserve state, answers, results and receipts across process restart; expire playing rooms | `GameRulesTests` lifecycle case; existing storage and room tests | API restart through SQLite, real browser API stop/start, expiry and purge |
 | Usable mobile/keyboard UI, reduced motion and accessible controls | Game/room component tests, transport validation tests | Desktop and 360px browser flows with axe, Enter-key reveal, overflow checks and screenshots |
 
+Named reveal refinement coverage: `GameRulesTests` checks A/B/pass/missing
+entries and privacy/removal behavior; `GameFunctionalTests` checks actual HTTP/hub
+reveal payloads, restart, neutral removed labels and version 1 aggregate-only state;
+`GamePanel.test.tsx` and `game.spec.ts` check named results and pre-reveal privacy.
+The JSON envelope advances to version 2 on the next mutation, while version 1
+results remain readable with empty choice lists. Local verification passed 89 backend and 82 frontend tests plus four verifier
+unit tests. Docker/browser and hosted checks for this refinement are in progress.
+
 M2 decisions:
 
 - Gameplay uses the same authenticated, CSRF-protected HTTP command path and
@@ -187,7 +197,8 @@ M2 decisions:
   migrate stored state explicitly before changing seed identifiers or shape.
 - Skipping or finishing an open round records it as skipped without revealing
   submitted choices. Percentages exclude passes and missing answers; zero votes
-  produces zero percentages. Results remain aggregate, including after reveal.
+  produces zero percentages. Revealed results now include each eligible player’s
+  name and choice to support conversation. A removed player’s finalized entry uses a neutral label.
 - The seed deck does not repeat within a session. After its 12 rounds, finishing
   remains available; prompt browsing, reset, custom content, and launch content
   remain M3. No leaderboard is added.

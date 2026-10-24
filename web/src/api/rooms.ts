@@ -103,7 +103,18 @@ function parseGame(g: Contract.GameView) {
         [r.prompt, r.optionA, r.optionB].every((s) => typeof s === 'string') &&
         [r.a, r.b, r.passes, r.missing, r.percentA, r.percentB].every(count) &&
         r.percentA <= 100 &&
-        r.percentB <= 100,
+        r.percentB <= 100 &&
+        (r.choices == null ||
+          (Array.isArray(r.choices) &&
+            r.choices.every(
+              (c) =>
+                c &&
+                uuid.test(c.participantId) &&
+                typeof c.name === 'string' &&
+                c.name.length > 0 &&
+                c.name.length <= 32 &&
+                ['a', 'b', 'pass', 'missing'].includes(c.choice),
+            ))),
     )
   )
     throw new RoomError('invalid_response', 'The game response could not be read')

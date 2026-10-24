@@ -6,8 +6,9 @@ namespace TeamGames.Core.Games;
 
 public sealed record GameCommand(Guid CommandId, string Action, Guid? SessionId = null, Guid? RoundId = null,
     long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0);
+public sealed record PlayerChoiceView(Guid ParticipantId, string Name, string Choice);
 public sealed record RoundResult(Guid RoundId, int Number, string Prompt, string OptionA, string OptionB,
-    bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB);
+    bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB, IReadOnlyList<PlayerChoiceView> Choices);
 public sealed record GameView(Guid SessionId, string GameId, Guid RoundId, int RoundNumber, long StageRevision,
     string Stage, string Prompt, string OptionA, string OptionB, int EligibleCount, int ResponseCount,
     bool Eligible, string? OwnChoice, long ResponseRevision, IReadOnlyList<string> AllowedActions,
@@ -35,7 +36,7 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
 {
     private sealed class SavedGames
     {
-        public int SchemaVersion { get; set; } = 1;
+        public int SchemaVersion { get; set; } = 2;
         public List<GameSession> Sessions { get; set; } = [];
     }
     private readonly IReadOnlyDictionary<string, IGameModule> registered = modules.ToDictionary(m => m.Id, StringComparer.Ordinal);
@@ -81,7 +82,9 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
     private static SavedGames Read(string json)
     {
         var session = JsonSerializer.Deserialize<SavedGames>(json) ?? throw new InvalidOperationException("Missing game state");
-        if (session.SchemaVersion != 1) throw new InvalidOperationException("Unsupported game state version");
+        if (session.SchemaVersion is not (1 or 2)) throw new InvalidOperationException("Unsupported game state version");
+        // Version 1 has aggregate-only results; modules project those with no named choices.
+        session.SchemaVersion = 2;
         return session;
     }
 }

@@ -1,5 +1,11 @@
 // Generated from TeamGames.Core room DTOs. Run the contracts tool to update.
 
+export interface PlayerChoiceView {
+  participantId: string
+  name: string
+  choice: string
+}
+
 export interface GameCommand {
   commandId: string
   action: string
@@ -25,6 +31,7 @@ export interface RoundResult {
   missing: number
   percentA: number
   percentB: number
+  choices: PlayerChoiceView[]
 }
 
 export interface GameView {

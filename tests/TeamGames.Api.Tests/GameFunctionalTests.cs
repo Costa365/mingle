@@ -71,6 +71,11 @@ public sealed class GameFunctionalTests : IDisposable
         var revealed = (await revealedResponse.Content.ReadFromJsonAsync<CommandResult>())!.Snapshot;
         var result = Assert.Single(revealed.Game!.Results);
         Assert.Equal((0, 1, 1, 1, 100), (result.A, result.B, result.Passes, result.Missing, result.PercentB));
+        Assert.Equal("missing", result.Choices!.Single(c => c.Name == "Host").Choice);
+        Assert.Equal("pass", result.Choices!.Single(c => c.Name == "One").Choice);
+        Assert.Equal("b", result.Choices!.Single(c => c.Name == "Two").Choice);
+        var revealedHub = await Until(snapshots.Reader, s => s.Game?.Stage == "revealed");
+        Assert.Equal("b", revealedHub.Game!.Results[0].Choices!.Single(c => c.Name == "Two").Choice);
         Assert.Equal("stage_changed", (await Error(one, changed, staleAnswer, HttpStatusCode.Conflict)).Code);
         using var retryResponse = await host.Post($"/api/rooms/{room.Id}/game", reveal);
         var retry = (await retryResponse.Content.ReadFromJsonAsync<CommandResult>())!;
@@ -127,7 +132,7 @@ public sealed class GameFunctionalTests : IDisposable
         var lateView = await late.Snapshot(room.Id);
         room = (await Play(late, lateView, "next")).Snapshot;
         Assert.True(room.Game!.Eligible);
-        Assert.Equal(result, Assert.Single(room.Game.Results));
+        Assert.Equal(JsonSerializer.Serialize(result), JsonSerializer.Serialize(Assert.Single(room.Game.Results)));
         room = (await late.Command(room.Id, new(Guid.NewGuid(), room.Version, "close"))).Snapshot;
         await Error(late, room, Command(room, "answer", "a"), HttpStatusCode.Gone);
     }
@@ -204,7 +209,10 @@ public sealed class GameFunctionalTests : IDisposable
         room = (await Play(host, room, "reveal")).Snapshot;
         var result = Assert.Single(room.Game!.Results);
         room = (await host.Command(room.Id, new(Guid.NewGuid(), room.Version, "remove", joined.YouId))).Snapshot;
-        Assert.Equal(result, Assert.Single(room.Game!.Results));
+        var preserved = Assert.Single(room.Game!.Results);
+        Assert.Equal(result.A, preserved.A);
+        Assert.Equal(result.Missing, preserved.Missing);
+        Assert.Equal("Removed player", preserved.Choices!.Single(c => c.ParticipantId == joined.YouId).Name);
         Assert.Equal(1, result.A);
         clock.Advance(TimeSpan.FromHours(25));
         Assert.Equal(HttpStatusCode.Gone, (await host.Client.GetAsync($"/api/rooms/{room.Id}")).StatusCode);
@@ -216,6 +224,44 @@ public sealed class GameFunctionalTests : IDisposable
         var database = scope.ServiceProvider.GetRequiredService<TeamGamesDbContext>();
         Assert.Empty(await database.Rooms.ToArrayAsync());
         Assert.Empty(await database.Receipts.ToArrayAsync());
+    }
+    [Fact]
+    public async Task AggregateOnlySavedGamesRemainReadableWithoutInventingNamedChoices()
+    {
+        CookieContainer cookies;
+        RoomSnapshot room;
+        using (var factory = new ApiFactory(directory))
+        using (var host = await Browser.Create(factory))
+        {
+            cookies = host.Cookies;
+            room = (await host.Enter(new(Guid.NewGuid(), "Host"))).Snapshot;
+            room = (await Play(host, room, "start")).Snapshot;
+            room = (await Play(host, room, "answer", "a")).Snapshot;
+            room = (await Play(host, room, "reveal")).Snapshot;
+        }
+        await using (var database = new TeamGamesDbContext(new DbContextOptionsBuilder<TeamGamesDbContext>()
+            .UseSqlite($"Data Source={Path.Combine(directory, "teamgames.db")}").Options))
+        {
+            var entity = await database.Rooms.SingleAsync();
+            var saved = System.Text.Json.Nodes.JsonNode.Parse(entity.GameState!)!;
+            saved["SchemaVersion"] = 1;
+            var session = saved["Sessions"]![0]!;
+            var state = System.Text.Json.Nodes.JsonNode.Parse(session["State"]!.GetValue<string>())!;
+            foreach (var result in state["Results"]!.AsArray()) result!.AsObject().Remove("Choices");
+            session["State"] = state.ToJsonString();
+            entity.GameState = saved.ToJsonString();
+            await database.SaveChangesAsync();
+        }
+        using (var factory = new ApiFactory(directory))
+        using (var host = await Browser.Create(factory, cookies))
+        {
+            room = await host.Snapshot(room.Id);
+            Assert.Equal(1, Assert.Single(room.Game!.Results).A);
+            Assert.Empty(room.Game.Results[0].Choices!);
+            room = (await Play(host, room, "next")).Snapshot;
+            room = (await Play(host, room, "reveal")).Snapshot;
+            Assert.Equal("missing", Assert.Single(room.Game!.Results[1].Choices!).Choice);
+        }
     }
     private static void AssertPublicGame(JsonElement game)
     {

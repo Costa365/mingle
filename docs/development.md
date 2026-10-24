@@ -221,8 +221,8 @@ boundary. Keep planned capabilities clearly distinct from implemented behavior.
 
 Host a room and choose **Start This or That**. Use separate browser profiles or
 regular/incognito contexts for independent players (incognito windows share a
-session with each other). Choose an option or pass; change it until reveal. The
-facilitator can reveal, skip, start the next round, or finish without waiting.
+session with each other). Choose an option or pass; change it until reveal. After reveal, each player’s name and choice are shown
+alongside vote totals so the team can talk about their answers. The facilitator can reveal, skip, start the next round, or finish without waiting.
 Return to the lobby to start a fresh session. New arrivals watch the current
 round and become eligible at the next one. The 12-pair starter deck is exhausted
 after 12 rounds; finish and start another session to play again.

@@ -55,6 +55,9 @@ public sealed class GameRulesTests
         var result = Assert.Single(View().Results);
         Assert.Equal(choice == "pass" ? 1 : 0, result.Passes);
         Assert.Equal(1, result.Missing);
+        Assert.Equal(choice, result.Choices!.Single(c => c.ParticipantId == player.Id).Choice);
+        Assert.Equal("Player", result.Choices!.Single(c => c.ParticipantId == player.Id).Name);
+        Assert.Equal("missing", result.Choices!.Single(c => c.ParticipantId == host.Id).Choice);
         Assert.Equal(choice == "a" ? 100 : 0, result.PercentA);
         Assert.Equal(choice == "b" ? 100 : 0, result.PercentB);
     }
@@ -99,7 +102,10 @@ public sealed class GameRulesTests
         var finalized = Assert.Single(View().Results);
         Assert.Equal(0, finalized.A);
         host.Removed = true;
-        Assert.Equal(finalized, Assert.Single(View().Results));
+        var preserved = Assert.Single(View().Results);
+        Assert.Equal(finalized.A, preserved.A);
+        Assert.Equal(finalized.Missing, preserved.Missing);
+        Assert.All(preserved.Choices!, c => Assert.Equal("Removed player", c.Name));
         host.Removed = false;
         Apply("next");
         Assert.True(View(late).Eligible);
@@ -114,6 +120,7 @@ public sealed class GameRulesTests
         Apply("answer", player, "a");
         Apply("finish");
         Assert.True(Assert.Single(View().Results).Skipped);
+        Assert.Empty(View().Results[0].Choices!);
         Assert.Equal(0, View().Results[0].A);
         Apply("lobby");
         Assert.Equal("lobby", room.Status);
@@ -163,6 +170,24 @@ public sealed class GameRulesTests
         Assert.Throws<RoomException>(() => Apply("answer", player, "b"));
         Apply("finish");
         Assert.Throws<RoomException>(() => Apply("reveal"));
+    }
+    [Fact]
+    public void LegacyAggregateStateRemainsReadableAndUpgradesOnNextCommand()
+    {
+        Start();
+        Apply("reveal");
+        var saved = System.Text.Json.Nodes.JsonNode.Parse(room.GameState!)!;
+        saved["SchemaVersion"] = 1;
+        var session = saved["Sessions"]![0]!;
+        var state = System.Text.Json.Nodes.JsonNode.Parse(session["State"]!.GetValue<string>())!;
+        foreach (var result in state["Results"]!.AsArray()) result!.AsObject().Remove("Choices");
+        session["State"] = state.ToJsonString();
+        room.GameState = saved.ToJsonString();
+        Assert.Empty(Assert.Single(View().Results).Choices);
+        Apply("next");
+        Assert.Equal(2, System.Text.Json.Nodes.JsonNode.Parse(room.GameState!)!["SchemaVersion"]!.GetValue<int>());
+        Apply("reveal");
+        Assert.Equal(2, View().Results[1].Choices.Count);
     }
     private sealed class OtherModule : IGameModule
     {

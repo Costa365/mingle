@@ -88,3 +88,56 @@ describe('game snapshot boundary', () => {
       expect(() => parseSnapshot({ ...room, status: 'playing', game: invalid })).toThrow()
   })
 })
+
+it('validates named choices in revealed result payloads', () => {
+  const game = {
+    sessionId: '50000000-0000-0000-0000-000000000001',
+    gameId: 'this-or-that',
+    roundId: '50000000-0000-0000-0000-000000000002',
+    roundNumber: 1,
+    stageRevision: 2,
+    stage: 'revealed',
+    prompt: 'Choose',
+    optionA: 'Tea',
+    optionB: 'Coffee',
+    eligibleCount: 1,
+    responseCount: 1,
+    eligible: true,
+    ownChoice: 'a',
+    responseRevision: 1,
+    allowedActions: [],
+    results: [] as unknown[],
+  }
+  const choice = { participantId: room.youId, name: 'Alex', choice: 'a' }
+  const result = {
+    roundId: game.roundId,
+    number: 1,
+    prompt: 'Choose',
+    optionA: 'Tea',
+    optionB: 'Coffee',
+    skipped: false,
+    a: 1,
+    b: 0,
+    passes: 0,
+    missing: 0,
+    percentA: 100,
+    percentB: 0,
+    choices: [choice],
+  }
+  expect(
+    parseSnapshot({ ...room, status: 'playing', game: { ...game, results: [result] } }).game
+      ?.results[0].choices,
+  ).toEqual([choice])
+  for (const invalid of [
+    { ...choice, choice: 'secret' },
+    { ...choice, participantId: 'bad' },
+    { ...choice, name: '' },
+  ])
+    expect(() =>
+      parseSnapshot({
+        ...room,
+        status: 'playing',
+        game: { ...game, results: [{ ...result, choices: [invalid] }] },
+      }),
+    ).toThrow()
+})

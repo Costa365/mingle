@@ -46,6 +46,7 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     ])
     await expect(page.getByText('2 of 3 responded')).toBeVisible()
     expect((await snapshot(page, room.id)).game!.ownChoice).toBeNull()
+    await expect(one.getByRole('list', { name: 'Player choices for round 1' })).toHaveCount(0)
     expect((await snapshot(one, room.id)).game!.ownChoice).toBe('a')
     await one.getByRole('button', { name: 'Pass this round' }).click()
     await expect(one.getByRole('button', { name: 'Pass this round' })).toHaveAttribute(
@@ -55,8 +56,14 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
     await page.getByRole('button', { name: 'Reveal answers' }).focus()
     await page.keyboard.press('Enter')
-    await expect(two.getByText(`${game.optionB}: 1 votes (100%)`)).toBeVisible()
+    await expect(two.getByText(`${game.optionB}: 1 vote (100%)`)).toBeVisible()
     await expect(one.getByText('1 passed · 1 unanswered')).toBeVisible()
+    const choices = one.getByRole('list', { name: 'Player choices for round 1' })
+    await expect(choices.getByRole('listitem').filter({ hasText: 'Host' })).toHaveText(/No answer/)
+    await expect(choices.getByRole('listitem').filter({ hasText: 'One' })).toHaveText(/Passed/)
+    await expect(choices.getByRole('listitem').filter({ hasText: 'Two' })).toContainText(
+      game.optionB,
+    )
     await expect(one.getByRole('button', { name: 'Next round' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Next round' }).click()
     await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()

@@ -1140,3 +1140,24 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.revealed-choices {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+.revealed-choices li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.revealed-choices li > * {
+  min-width: 0;
+  flex: 1;
+}
+.revealed-choices span {
+  text-align: right;
+}

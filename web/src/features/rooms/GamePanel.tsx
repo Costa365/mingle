@@ -157,14 +157,41 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
                   {!result.skipped && (
                     <>
                       <p>
-                        {result.optionA}: {result.a} votes ({result.percentA}%)
+                        {result.optionA}: {result.a} {result.a === 1 ? 'vote' : 'votes'} (
+                        {result.percentA}%)
                       </p>
                       <p>
-                        {result.optionB}: {result.b} votes ({result.percentB}%)
+                        {result.optionB}: {result.b} {result.b === 1 ? 'vote' : 'votes'} (
+                        {result.percentB}%)
                       </p>
                       <p>
                         {result.passes} passed · {result.missing} unanswered
                       </p>
+                      {(result.choices?.length ?? 0) > 0 ? (
+                        <ul
+                          className="revealed-choices"
+                          aria-label={`Player choices for round ${result.number}`}
+                        >
+                          {result.choices!.map((choice) => (
+                            <li key={choice.participantId}>
+                              <strong>{choice.name}</strong>
+                              <span>
+                                {choice.choice === 'a'
+                                  ? result.optionA
+                                  : choice.choice === 'b'
+                                    ? result.optionB
+                                    : choice.choice === 'pass'
+                                      ? 'Passed'
+                                      : 'No answer'}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="room-note">
+                          Individual choices are unavailable for this earlier round
+                        </p>
+                      )}
                     </>
                   )}
                 </article>
