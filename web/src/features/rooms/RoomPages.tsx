@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { commandRoom, enterRoom, RoomError } from '../../api/rooms'
 import type { EntryRequest, RoomCommand } from '../../api/rooms'
 import { GamePanel } from './GamePanel'
+import { gameName } from './gameNames'
 import { useRoom } from '../../realtime/useRoom'
 
 export function RoomEntry({ create }: { create: boolean }) {
@@ -139,6 +140,30 @@ export function RoomLobby() {
     closeButton.current?.focus()
   }
   const synchronized = status === 'live'
+  const [workspace, setWorkspace] = useState<{
+    roomId: string
+    stageKey: string
+    view: 'room' | 'game' | 'prompts'
+  }>({ roomId: id, stageKey: '', view: 'room' })
+  const stageKey = snapshot?.game
+    ? `${snapshot.game.sessionId}:${snapshot.game.roundId}:${snapshot.game.stage}`
+    : 'lobby'
+  if (snapshot && synchronized && (workspace.roomId !== id || workspace.stageKey !== stageKey)) {
+    setWorkspace({ roomId: id, stageKey, view: snapshot.game ? 'game' : 'room' })
+  }
+  const isFacilitator = snapshot?.youId === snapshot?.facilitatorId
+  const view = workspace.view === 'prompts' && !isFacilitator ? 'game' : workspace.view
+  function selectView(next: 'room' | 'game' | 'prompts') {
+    setWorkspace((current) => ({ ...current, view: next }))
+  }
+  useEffect(() => {
+    if (!workspace.stageKey) return
+    const heading = document.getElementById(
+      view === 'game' ? 'game-heading' : view === 'prompts' ? 'prompts-heading' : 'room-heading',
+    )
+    heading?.focus({ preventScroll: true })
+    heading?.scrollIntoView?.({ block: 'start', behavior: 'instant' })
+  }, [workspace.stageKey, view])
   async function act(action: string, targetId?: string, locked?: boolean, retry?: RoomCommand) {
     if (!snapshot || !synchronized || sending.current) return
     sending.current = true
@@ -218,15 +243,30 @@ export function RoomLobby() {
   const facilitator = snapshot.participants.find((participant) => participant.isFacilitator)
   return (
     <section className="page-content lobby-page">
-      <title>Your room — Mingle</title>
-      <div className="lobby-heading">
-        <div>
-          <p className="eyebrow">YOUR PEOPLE, ONE ROOM</p>
-          <h1>The gathering place</h1>
-        </div>
+      <title>
+        {snapshot.game ? `${gameName(snapshot.game.gameId)} — Mingle` : 'Your room — Mingle'}
+      </title>
+      <div className="workspace-header">
+        <div className="workspace-identity">Room {snapshot.code}</div>
         <span className={`connection-status ${synchronized ? 'is-live' : ''}`} role="status">
           {synchronized ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
         </span>
+        <nav className="workspace-nav" aria-label="Room navigation">
+          {(['room', 'game', ...(isFacilitator ? ['prompts'] : [])] as const).map((item) => (
+            <button
+              key={item}
+              className="workspace-tab"
+              aria-current={view === item ? 'page' : undefined}
+              onClick={() => selectView(item as 'room' | 'game' | 'prompts')}
+            >
+              {item === 'room'
+                ? `Room (${snapshot.participants.length})`
+                : item === 'game'
+                  ? `Game${snapshot.game ? (snapshot.game.stage === 'finished' ? ' · Finished' : ' · Live') : ''}`
+                  : 'Prompts'}
+            </button>
+          ))}
+        </nav>
       </div>
       {!synchronized && (
         <div className="room-recovery">
@@ -239,135 +279,157 @@ export function RoomLobby() {
         </div>
       )}
       {room.error && synchronized && <p role="alert">{room.error}</p>}
-      <div className="lobby-grid">
-        <section className="lobby-roster" aria-labelledby="roster-heading">
-          <h2 id="roster-heading">
-            Your team{' '}
+      <div hidden={view !== 'room'}>
+        {snapshot.game && (
+          <div className="current-game-strip">
             <span>
-              ({snapshot.participants.length}/{snapshot.capacity})
+              {gameName(snapshot.game.gameId)} · Round {snapshot.game.roundNumber} ·{' '}
+              {snapshot.game.stage === 'responding'
+                ? 'Live'
+                : snapshot.game.stage === 'revealed'
+                  ? 'Revealed'
+                  : 'Finished'}
             </span>
-          </h2>
-          {!facilitator?.isOnline && (
-            <p className="room-note">
-              Your facilitator is away. Their place is saved; they can reconnect to continue.
-            </p>
-          )}
-          <ul>
-            {snapshot.participants.map((participant) => (
-              <li key={participant.id}>
-                <div className="participant-identity">
-                  <span className="participant-avatar" aria-hidden="true">
-                    {Array.from(participant.name)[0]}
-                  </span>
-                  <div>
-                    <strong>
-                      {participant.name}
-                      {participant.id === snapshot.youId ? ' (you)' : ''}
-                    </strong>
-                    <span className="participant-presence">
-                      {participant.isFacilitator ? 'Facilitator · ' : ''}
-                      {participant.isOnline ? 'Online' : 'Away'}
-                    </span>
-                  </div>
-                </div>
-                {participant.id !== snapshot.youId && (can('remove') || can('transfer')) && (
-                  <div className="participant-actions">
-                    {can('transfer') && (
-                      <button
-                        disabled={blocked}
-                        onClick={() => {
-                          void act('transfer', participant.id)
-                        }}
-                        aria-label={`Make ${participant.name} facilitator`}
-                      >
-                        Make {participant.name} facilitator
-                      </button>
-                    )}
-                    {can('remove') && (
-                      <button
-                        disabled={blocked}
-                        onClick={() => {
-                          void act('remove', participant.id)
-                        }}
-                        aria-label={`Remove ${participant.name}`}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-        <aside className="lobby-invite" aria-labelledby="invite-heading">
-          <h2 id="invite-heading">Bring your people</h2>
-          <p>Share this code or send an invite link</p>
-          <p className="invite-code" aria-label={`Room code ${snapshot.code}`}>
-            {snapshot.code}
-          </p>
-          <div className="room-buttons">
-            <button
-              className="button"
-              onClick={() => {
-                void copy(true)
-              }}
-            >
-              Copy invite link
-            </button>
-            <button
-              className="text-button"
-              onClick={() => {
-                void copy(false)
-              }}
-            >
-              Copy code
+            <button className="text-button" onClick={() => selectView('game')}>
+              Return to game →
             </button>
           </div>
-          <p className="copy-status" role="status">
-            {copyStatus}
+        )}
+        <h1 id="room-heading" tabIndex={-1}>
+          The gathering place
+        </h1>
+        <div className="lobby-grid">
+          <section className="lobby-roster" aria-labelledby="roster-heading">
+            <h2 id="roster-heading">
+              Your team{' '}
+              <span>
+                ({snapshot.participants.length}/{snapshot.capacity})
+              </span>
+            </h2>
+            {!facilitator?.isOnline && (
+              <p className="room-note">
+                Your facilitator is away. Their place is saved; they can reconnect to continue.
+              </p>
+            )}
+            <ul>
+              {snapshot.participants.map((participant) => (
+                <li key={participant.id}>
+                  <div className="participant-identity">
+                    <span className="participant-avatar" aria-hidden="true">
+                      {Array.from(participant.name)[0]}
+                    </span>
+                    <div>
+                      <strong>
+                        {participant.name}
+                        {participant.id === snapshot.youId ? ' (you)' : ''}
+                      </strong>
+                      <span className="participant-presence">
+                        {participant.isFacilitator ? 'Facilitator · ' : ''}
+                        {participant.isOnline ? 'Online' : 'Away'}
+                      </span>
+                    </div>
+                  </div>
+                  {participant.id !== snapshot.youId && (can('remove') || can('transfer')) && (
+                    <div className="participant-actions">
+                      {can('transfer') && (
+                        <button
+                          disabled={blocked}
+                          onClick={() => {
+                            void act('transfer', participant.id)
+                          }}
+                          aria-label={`Make ${participant.name} facilitator`}
+                        >
+                          Make {participant.name} facilitator
+                        </button>
+                      )}
+                      {can('remove') && (
+                        <button
+                          disabled={blocked}
+                          onClick={() => {
+                            void act('remove', participant.id)
+                          }}
+                          aria-label={`Remove ${participant.name}`}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <aside className="lobby-invite" aria-labelledby="invite-heading">
+            <h2 id="invite-heading">Bring your people</h2>
+            <p>Share this code or send an invite link</p>
+            <p className="invite-code" aria-label={`Room code ${snapshot.code}`}>
+              {snapshot.code}
+            </p>
+            <div className="room-buttons">
+              <button
+                className="button"
+                onClick={() => {
+                  void copy(true)
+                }}
+              >
+                Copy invite link
+              </button>
+              <button
+                className="text-button"
+                onClick={() => {
+                  void copy(false)
+                }}
+              >
+                Copy code
+              </button>
+            </div>
+            <p className="copy-status" role="status">
+              {copyStatus}
+            </p>
+            <p className="room-note">
+              {snapshot.joinLocked
+                ? 'Joining is locked. Existing participants can still reconnect.'
+                : 'Joining is open to people with your invitation.'}
+            </p>
+            {can('lock') && (
+              <button
+                className="text-button"
+                disabled={blocked}
+                onClick={() => {
+                  void act('lock', undefined, !snapshot.joinLocked)
+                }}
+              >
+                {snapshot.joinLocked ? 'Unlock joining' : 'Lock joining'}
+              </button>
+            )}
+          </aside>
+        </div>
+        {actionError && (
+          <p className="room-error" role="alert">
+            {actionError}
           </p>
-          <p className="room-note">
-            {snapshot.joinLocked
-              ? 'Joining is locked. Existing participants can still reconnect.'
-              : 'Joining is open to people with your invitation.'}
-          </p>
-          {can('lock') && (
-            <button
-              className="text-button"
-              disabled={blocked}
-              onClick={() => {
-                void act('lock', undefined, !snapshot.joinLocked)
-              }}
-            >
-              {snapshot.joinLocked ? 'Unlock joining' : 'Lock joining'}
-            </button>
-          )}
-        </aside>
+        )}
+        {pending && !busy && (
+          <button
+            className="button"
+            disabled={!synchronized}
+            onClick={() => {
+              void act(pending.action, pending.targetId, pending.locked, pending)
+            }}
+          >
+            Retry last change
+          </button>
+        )}
       </div>
-      {actionError && (
-        <p className="room-error" role="alert">
-          {actionError}
-        </p>
-      )}
-      {pending && !busy && (
-        <button
-          className="button"
-          disabled={!synchronized}
-          onClick={() => {
-            void act(pending.action, pending.targetId, pending.locked, pending)
-          }}
-        >
-          Retry last change
-        </button>
-      )}
       <GamePanel
+        view={view}
+        onViewChange={selectView}
         snapshot={snapshot}
         disabled={blocked}
         accept={room.accept}
         refresh={room.refresh}
       />
-      <div className="lobby-next">
+      <div hidden={view !== 'room'} className="lobby-next">
         <div>
           <h2>Make yourself at home</h2>
           <p>Invite your teammates and settle in. Your facilitator sets the pace.</p>

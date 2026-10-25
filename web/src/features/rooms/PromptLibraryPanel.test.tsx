@@ -253,3 +253,20 @@ it('labels the scrollable prompt list and exposes category, tags and status besi
   expect(within(rows[1]).getByRole('button', { name: 'Use this prompt' })).toBeDisabled()
   expect(within(rows[1]).getByRole('button', { name: 'Edit prompt' })).toBeEnabled()
 })
+
+it('provides a page heading and directly loaded library in the dedicated Prompts view', async () => {
+  render(
+    <PromptLibraryPanel
+      snapshot={room}
+      disabled={false}
+      accept={accept}
+      refresh={refresh}
+      choose={choose}
+      expanded
+    />,
+  )
+  expect(screen.getByRole('heading', { name: 'Your prompt library', level: 1 })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Browse prompts' })).not.toBeInTheDocument()
+  await screen.findByText('Mountains / Seaside')
+  expect(screen.getByRole('heading', { name: 'Available prompts', level: 2 })).toBeVisible()
+})

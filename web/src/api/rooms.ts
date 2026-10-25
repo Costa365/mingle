@@ -70,6 +70,8 @@ export function parseSnapshot(value: unknown): RoomSnapshot {
   if (s.status === 'playing' && !s.game)
     throw new RoomError('invalid_response', 'Missing game state')
   if (s.game != null) parseGame(s.game)
+  if (s.game?.responses?.some((r) => !s.participants.some((p) => p.id === r.participantId)))
+    throw new RoomError('invalid_response', 'The game response could not be read')
   return s
 }
 function parseGame(g: Contract.GameView) {
@@ -89,6 +91,14 @@ function parseGame(g: Contract.GameView) {
     !count(g.eligibleCount) ||
     !count(g.responseCount) ||
     g.responseCount > g.eligibleCount ||
+    (g.responses != null &&
+      (!Array.isArray(g.responses) ||
+        g.responses.length !== g.eligibleCount ||
+        g.responses.some(
+          (r) => !r || !uuid.test(r.participantId) || typeof r.hasResponded !== 'boolean',
+        ) ||
+        new Set(g.responses.map((r) => r.participantId)).size !== g.responses.length ||
+        g.responses.filter((r) => r.hasResponded).length !== g.responseCount)) ||
     typeof g.eligible !== 'boolean' ||
     ![null, 'a', 'b', 'pass'].includes(g.ownChoice) ||
     ![g.prompt, g.optionA, g.optionB].every((s) => typeof s === 'string' && s.length > 0) ||

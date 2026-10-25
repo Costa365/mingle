@@ -87,6 +87,24 @@ describe('game snapshot boundary', () => {
     ])
       expect(() => parseSnapshot({ ...room, status: 'playing', game: invalid })).toThrow()
   })
+  it('validates named response status against counts, unique IDs and room membership', () => {
+    const responses = room.participants.map((p) => ({ participantId: p.id, hasResponded: false }))
+    expect(
+      parseSnapshot({ ...room, status: 'playing', game: { ...game, responses } }).game?.responses,
+    ).toEqual(responses)
+    for (const invalid of [
+      'not a list',
+      [null],
+      responses.slice(0, 1),
+      [responses[0], responses[0]],
+      [responses[0], { ...responses[1], participantId: crypto.randomUUID() }],
+      [responses[0], { ...responses[1], hasResponded: 'yes' }],
+      [responses[0], { ...responses[1], hasResponded: true }],
+    ])
+      expect(() =>
+        parseSnapshot({ ...room, status: 'playing', game: { ...game, responses: invalid } }),
+      ).toThrow()
+  })
 })
 
 it('validates named choices in revealed result payloads', () => {

@@ -29,17 +29,22 @@ export function PromptLibraryPanel({
   accept,
   refresh,
   choose,
+  expanded = false,
 }: {
   snapshot: RoomSnapshot
   disabled: boolean
   accept: (s: RoomSnapshot) => void
   refresh: () => Promise<unknown>
+  expanded?: boolean
   choose: (selection: Partial<GameCommand>) => Promise<void>
 }) {
+  const Heading = expanded ? 'h1' : 'h3'
+  const Subheading = expanded ? 'h2' : 'h4'
   const listId = useId()
   const headingId = `${listId}-heading`
   const scrollHelpId = `${listId}-scroll-help`
-  const [open, setOpen] = useState(false)
+  const [toggledOpen, setOpen] = useState(false)
+  const open = expanded || toggledOpen
   const [prompts, setPrompts] = useState<PromptView[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
@@ -67,10 +72,14 @@ export function PromptLibraryPanel({
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setLoadError('The prompt library could not be loaded; close and reopen it to retry')
+          setLoadError(
+            expanded
+              ? 'The prompt library could not be loaded; leave Prompts and return to retry'
+              : 'The prompt library could not be loaded; close and reopen it to retry',
+          )
       })
     return () => controller.abort()
-  }, [open, snapshot.id, snapshot.version, disabled])
+  }, [open, snapshot.id, snapshot.version, disabled, expanded])
   const pool = prompts.filter((p) => p.gameId === gameId)
   const normalized = (text: string) =>
     text.normalize('NFKC').trim().toUpperCase().split(/\s+/u).join(' ')
@@ -114,7 +123,11 @@ export function PromptLibraryPanel({
       await getPrompts(snapshot.id)
         .then((page) => setPrompts(page.prompts))
         .catch(() =>
-          setLoadError('Your prompt change is saved; close and reopen the library to reload it'),
+          setLoadError(
+            expanded
+              ? 'Your prompt change is saved; leave Prompts and return to reload it'
+              : 'Your prompt change is saved; close and reopen the library to reload it',
+          ),
         )
     } catch (cause) {
       if (cause instanceof RoomError && cause.status >= 400 && cause.status < 500) {
@@ -129,12 +142,16 @@ export function PromptLibraryPanel({
   }
   return (
     <section className="prompt-library" aria-label="Prompt library">
-      <button className="text-button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        Browse prompts
-      </button>
+      {!expanded && (
+        <button className="text-button" aria-expanded={open} onClick={() => setOpen(!open)}>
+          Browse prompts
+        </button>
+      )}
       {open && (
         <>
-          <h3>Your prompt library</h3>
+          <Heading id="prompts-heading" tabIndex={-1}>
+            Your prompt library
+          </Heading>
           <div className="prompt-filters">
             <label>
               Game
@@ -254,7 +271,7 @@ export function PromptLibraryPanel({
                 void save(editing ? 'edit' : 'create', editing ?? undefined)
               }}
             >
-              <h4>{editing ? 'Edit room prompt' : 'New room prompt'}</h4>
+              <Subheading>{editing ? 'Edit room prompt' : 'New room prompt'}</Subheading>
               <label>
                 Prompt text
                 <input
@@ -328,7 +345,7 @@ export function PromptLibraryPanel({
           )}
           <section className="prompt-results-frame" aria-labelledby={headingId}>
             <div className="prompt-results-toolbar">
-              <h4 id={headingId}>Available prompts</h4>
+              <Subheading id={headingId}>Available prompts</Subheading>
               <span>Scroll for more ↓</span>
             </div>
             <p id={scrollHelpId} className="prompt-scroll-help">

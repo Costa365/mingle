@@ -58,12 +58,19 @@ public sealed class GameFunctionalTests : IDisposable
         var hidden = await Until(snapshots.Reader, s => s.Game?.ResponseCount == 2);
         Assert.Null(hidden.Game!.OwnChoice);
         Assert.Empty(hidden.Game.Results);
+        Assert.Equal(3, hidden.Game.Responses!.Count);
+        Assert.Equal(2, hidden.Game.Responses!.Count(r => r.HasResponded));
+        Assert.False(hidden.Game.Responses!.Single(r => r.ParticipantId == room.YouId).HasResponded);
         using var raw = JsonDocument.Parse(await host.Client.GetStringAsync($"/api/rooms/{room.Id}"));
         AssertPublicGame(raw.RootElement.GetProperty("game"));
+        foreach (var status in raw.RootElement.GetProperty("game").GetProperty("responses").EnumerateArray())
+            Assert.Equal(new[] { "hasResponded", "participantId" }, status.EnumerateObject().Select(p => p.Name).Order());
         var playerView = await one.Snapshot(room.Id);
         Assert.Equal("a", playerView.Game!.OwnChoice);
         var changed = (await Play(one, playerView, "answer", "pass")).Snapshot;
         Assert.Equal(2, changed.Game!.ResponseRevision);
+        Assert.Equal(hidden.Game.Responses, changed.Game.Responses);
+        Assert.Equal(hidden.Game.Responses, (await host.Snapshot(room.Id)).Game!.Responses);
         var staleAnswer = Command(changed, "answer", "a");
         var reveal = Command(room, "reveal"); // Other answers do not invalidate a stage command.
         using var revealedResponse = await host.Post($"/api/rooms/{room.Id}/game", reveal);
@@ -121,9 +128,11 @@ public sealed class GameFunctionalTests : IDisposable
         await Error(player, room, answer with { CommandId = Guid.NewGuid() }, HttpStatusCode.Conflict);
         var lateRoom = (await late.Enter(new(Guid.NewGuid(), "Late", room.Code), false)).Snapshot;
         Assert.False(lateRoom.Game!.Eligible);
+        Assert.DoesNotContain(lateRoom.Game.Responses!, r => r.ParticipantId == lateRoom.YouId);
         await Error(late, lateRoom, Command(lateRoom, "answer", "b"), HttpStatusCode.Forbidden);
         room = (await host.Command(room.Id, new(Guid.NewGuid(), (await host.Snapshot(room.Id)).Version, "remove", playerRoom.YouId))).Snapshot;
         await Error(player, room, answer, HttpStatusCode.Forbidden); // Receipt cannot restore revoked access.
+        Assert.DoesNotContain(room.Game!.Responses!, r => r.ParticipantId == playerRoom.YouId);
         room = (await Play(host, room, "reveal")).Snapshot;
         var result = Assert.Single(room.Game!.Results);
         Assert.Equal((0, 1), (result.A, result.Missing));
@@ -266,7 +275,7 @@ public sealed class GameFunctionalTests : IDisposable
     private static void AssertPublicGame(JsonElement game)
     {
         string[] allowed = ["sessionId", "gameId", "roundId", "roundNumber", "stageRevision", "stage", "prompt", "optionA", "optionB",
-            "eligibleCount", "responseCount", "eligible", "ownChoice", "responseRevision", "allowedActions", "results", "remainingPrompts", "poolSize", "category", "tag", "search", "usedPromptIds"];
+            "eligibleCount", "responseCount", "eligible", "ownChoice", "responseRevision", "allowedActions", "results", "remainingPrompts", "poolSize", "category", "tag", "search", "usedPromptIds", "responses"];
         Assert.Equal(allowed.Order(), game.EnumerateObject().Select(p => p.Name).Order());
     }
     private static async Task<RoomSnapshot> Until(ChannelReader<RoomSnapshot> reader, Func<RoomSnapshot, bool> predicate)

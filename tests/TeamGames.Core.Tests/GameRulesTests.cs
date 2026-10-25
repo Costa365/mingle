@@ -42,6 +42,30 @@ public sealed class GameRulesTests
     [InlineData("a")]
     [InlineData("b")]
     [InlineData("pass")]
+    public void ResponseStatusRevealsParticipationOnlyAndResetsWithTheFrozenRoster(string choice)
+    {
+        Start();
+        Assert.All(View().Responses!, response => Assert.False(response.HasResponded));
+        Apply("answer", player, choice);
+        var late = RoomRules.Join(room, Guid.NewGuid(), "Late", 20);
+        Assert.Equal(new ResponseStatusView(player.Id, true), View().Responses!.Single(r => r.ParticipantId == player.Id));
+        Assert.Equal(View().Responses, View(player).Responses);
+        Assert.Null(View().OwnChoice);
+        Assert.DoesNotContain(View(late).Responses!, r => r.ParticipantId == late.Id);
+        Apply("answer", player, choice == "pass" ? "a" : "pass");
+        Assert.Single(View().Responses!, r => r.HasResponded);
+        player.Removed = true;
+        Assert.Single(View().Responses!);
+        Assert.Equal(0, View().ResponseCount);
+        Apply("reveal");
+        Apply("next");
+        Assert.Contains(View().Responses!, r => r.ParticipantId == late.Id);
+        Assert.All(View().Responses!, response => Assert.False(response.HasResponded));
+    }
+    [Theory]
+    [InlineData("a")]
+    [InlineData("b")]
+    [InlineData("pass")]
     public void ResponsesCanBeChangedWithoutAdvancingTheStage(string choice)
     {
         Start();

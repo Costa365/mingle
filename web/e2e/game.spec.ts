@@ -83,6 +83,11 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
     await page.getByRole('button', { name: 'Skip round' }).click()
     await expect(one.getByRole('heading', { name: 'Round 2 · Skipped' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Round 1', exact: true })).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Next round' })).toBeInViewport()
+    await page.getByText('Earlier rounds (1)', { exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Round 1', exact: true })).toBeVisible()
+    await page.getByText('Earlier rounds (1)', { exact: true }).click()
     await page.getByRole('button', { name: 'Next round' }).click()
     await twoContext.close() // A disconnected eligible participant must not block reveal.
     await page.getByRole('button', { name: 'Reveal answers' }).click()
@@ -167,4 +172,87 @@ test('an ambiguous game acknowledgement retries the same command without advanci
   expect(commands).toHaveLength(2)
   expect(commands[0]).toEqual(commands[1])
   expect((await snapshot(page, room.id)).game!.results).toHaveLength(1)
+})
+
+test('remote starts focus Game, named responses stay private and room navigation is not interrupted by answers', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    viewport: page.viewportSize(),
+    reducedMotion: 'reduce',
+  })
+  try {
+    const room = await host(page)
+    const player = await context.newPage()
+    await join(player, room.code, 'Maya')
+    const navigation = player.getByRole('navigation', { name: 'Room navigation' })
+    await expect(navigation.getByRole('button', { name: 'Prompts', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Prompts', exact: true }).click()
+    await page.getByLabel('Search prompts').fill('Mountains')
+    await expect(page.getByText('1 prompt · 1 unused and enabled')).toBeVisible()
+    await page.getByRole('button', { name: 'Use this prompt', exact: true }).click()
+    const heading = player.getByRole('heading', { name: 'This or That', exact: true })
+    await expect(heading).toBeFocused()
+    await expect(player).toHaveTitle('This or That — Mingle')
+    await expect(heading).toBeInViewport()
+    await expect(player.getByText('This or That has started', { exact: true })).toBeVisible()
+    const choices = player.getByRole('group', { name: 'Your choice' }).getByRole('button')
+    await expect(choices).toHaveCount(2)
+    const answer = await choices.first().boundingBox()
+    expect(answer!.height).toBeLessThanOrEqual(test.info().project.name === 'desktop' ? 80 : 70)
+    const pass = player.getByRole('button', { name: 'Pass this round' })
+    const passBox = await pass.boundingBox()
+    expect(passBox!.height).toBeGreaterThanOrEqual(44)
+    expect(passBox!.width).toBeLessThan(answer!.width)
+    await expect(player.getByText('You can always pass', { exact: true })).toHaveCount(0)
+    await pass.focus()
+    await player.keyboard.press('Enter')
+    await expect(pass).toHaveAttribute('aria-pressed', 'true')
+    const responses = page.getByRole('list', { name: 'Participant responses' })
+    await expect(responses.getByRole('listitem').filter({ hasText: /^Maya/ })).toHaveText(
+      'MayaAnswered',
+    )
+    await expect(responses).not.toContainText(/pass/i)
+    const privateView = (await snapshot(page, room.id)).game!
+    expect(privateView.ownChoice).toBeNull()
+    expect(privateView.results).toEqual([])
+    expect(privateView.responses).toEqual(
+      expect.arrayContaining([
+        { participantId: (await snapshot(player, room.id)).youId, hasResponded: true },
+      ]),
+    )
+    await player.getByRole('button', { name: /^Room \(/ }).click()
+    const copy = player.getByRole('button', { name: 'Copy invite link' })
+    await copy.focus()
+    await page.getByRole('group', { name: 'Your choice' }).getByRole('button').first().click()
+    await expect(page.getByText('2 of 2 responded')).toBeVisible()
+    await expect(copy).toBeFocused()
+    await expect(player.getByRole('heading', { name: 'The gathering place' })).toBeVisible()
+    await page.getByRole('button', { name: 'Reveal answers' }).click()
+    await expect(heading).toBeFocused()
+    await page.getByRole('button', { name: 'Prompts', exact: true }).click()
+    await page.getByLabel('Search prompts').fill('')
+    await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
+    await expect(player.getByText('Round 2 · Make your choice')).toBeVisible()
+    await expect(heading).toBeFocused()
+    await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeHidden()
+    await expect(player.getByRole('list', { name: 'Participant responses' })).not.toContainText(
+      'Answered',
+    )
+    await player.reload()
+    await expect(player.getByRole('group', { name: 'Your choice' })).toBeVisible()
+    expect((await new AxeBuilder({ page: player }).analyze()).violations).toEqual([])
+    expect(await player.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    )
+    await player.screenshot({
+      path: `test-results/focused-game-${test.info().project.name}.png`,
+      fullPage: true,
+    })
+  } finally {
+    await context.close()
+  }
 })

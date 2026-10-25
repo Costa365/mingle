@@ -14,11 +14,13 @@ const mocks = vi.hoisted(() => ({
   accept: vi.fn(),
   refresh: vi.fn(),
   retry: vi.fn(),
+  prompts: vi.fn(),
 }))
 vi.mock('../../api/rooms', async (original) => ({
   ...(await original<typeof import('../../api/rooms')>()),
   enterRoom: mocks.enter,
   commandRoom: mocks.command,
+  getPrompts: mocks.prompts,
 }))
 vi.mock('../../realtime/useRoom', () => ({ useRoom: mocks.hook }))
 function entry(create: boolean, path = '/') {
@@ -40,7 +42,7 @@ function lobby(snapshot: RoomSnapshot = room, status = 'live', error = '') {
     refresh: mocks.refresh,
     retry: mocks.retry,
   })
-  render(
+  return render(
     <MemoryRouter>
       <RoomLobby />
     </MemoryRouter>,
@@ -51,6 +53,7 @@ beforeEach(() => {
   sessionStorage.clear()
   mocks.enter.mockResolvedValue({ snapshot: room })
   mocks.command.mockResolvedValue({ snapshot: { ...room, version: 3 } })
+  mocks.prompts.mockResolvedValue({ prompts: [], roomVersion: room.version })
   mocks.refresh.mockResolvedValue(undefined)
 })
 describe('room entry', () => {
@@ -195,5 +198,93 @@ describe('room lobby', () => {
     lobby({ ...room, status: 'closed' })
     expect(screen.getByRole('heading', { name: 'This room is closed' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Lock joining' })).not.toBeInTheDocument()
+  })
+})
+
+const playing: RoomSnapshot = {
+  ...room,
+  status: 'playing',
+  game: {
+    sessionId: '50000000-0000-0000-0000-000000000001',
+    roundId: '50000000-0000-0000-0000-000000000002',
+    gameId: 'this-or-that',
+    roundNumber: 1,
+    stageRevision: 1,
+    stage: 'responding',
+    prompt: 'Choose',
+    optionA: 'Tea',
+    optionB: 'Coffee',
+    eligibleCount: 2,
+    responseCount: 0,
+    eligible: true,
+    ownChoice: null,
+    responseRevision: 0,
+    allowedActions: ['answer', 'reveal', 'skip', 'finish'],
+    results: [],
+    responses: room.participants.map((p) => ({ participantId: p.id, hasResponded: false })),
+  },
+}
+describe('focused game workspace', () => {
+  it('focuses remote starts and new rounds but preserves navigation on answers and reconnect', async () => {
+    const rendered = lobby()
+    const update = (snapshot: RoomSnapshot, status = 'live') => {
+      mocks.hook.mockReturnValue({
+        snapshot,
+        status,
+        error: '',
+        accept: mocks.accept,
+        refresh: mocks.refresh,
+        retry: mocks.retry,
+      })
+      rendered.rerender(
+        <MemoryRouter>
+          <RoomLobby />
+        </MemoryRouter>,
+      )
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Prompts' }))
+    expect(screen.getByRole('heading', { name: 'Your prompt library' })).toBeVisible()
+    update(playing)
+    expect(screen.getByRole('heading', { name: 'This or That' })).toHaveFocus()
+    expect(screen.queryByRole('region', { name: /Your team/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Room (2)' }))
+    const copy = screen.getByRole('button', { name: 'Copy invite link' })
+    copy.focus()
+    update({
+      ...playing,
+      version: 3,
+      game: {
+        ...playing.game!,
+        responseCount: 1,
+        responses: [
+          { participantId: room.youId, hasResponded: true },
+          { participantId: room.participants[1].id, hasResponded: false },
+        ],
+      },
+    })
+    expect(copy).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'The gathering place' })).toBeVisible()
+    update(playing, 'offline')
+    update(playing)
+    expect(copy).toHaveFocus()
+    update({ ...playing, game: { ...playing.game!, roundId: crypto.randomUUID(), roundNumber: 2 } })
+    expect(screen.getByRole('heading', { name: 'This or That' })).toHaveFocus()
+    update(room)
+    expect(screen.getByRole('heading', { name: 'The gathering place' })).toHaveFocus()
+  })
+  it('opens an existing game directly for players and excludes facilitator navigation', () => {
+    lobby({
+      ...playing,
+      youId: room.participants[1].id,
+      allowedActions: [],
+      game: { ...playing.game!, allowedActions: ['answer'] },
+    })
+    expect(screen.getByRole('heading', { name: 'This or That' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: 'Prompts' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reveal answers' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Room (2)' }))
+    expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Return to game →' }))
+    expect(screen.getByRole('group', { name: 'Your choice' })).toBeVisible()
   })
 })

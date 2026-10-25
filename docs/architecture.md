@@ -294,3 +294,20 @@ for active rooms, command latency/conflicts, reconnects, and storage failures.
 
 If capacity tests fail, measure the cause before expanding infrastructure. A move
 to PostgreSQL or multiple API replicas requires an explicit architecture update.
+
+### Named response progress
+
+Game modules project an optional `responses` list of `participantId` and
+`hasResponded` pairs for the current eligible roster. For This or That, A, B and
+pass all produce the same public participation flag; unrevealed choice values
+remain restricted to their author. Late arrivals are excluded until the next
+round, removed memberships disappear, and disconnects do not alter eligibility.
+This list is derived from durable module state for both HTTP and hub snapshots;
+it requires no new persistence migration. The client validates unique IDs, room
+membership and consistency with eligible/response counts. Older views without the
+list retain aggregate progress without inventing per-player status.
+
+Room/Game/Prompts navigation is presentation state. Only synchronized changes to
+session/round/stage move the workspace and focus; answer revisions, presence and
+same-stage resynchronization do not. Navigation does not discard pending command
+IDs or prompt drafts. Module views still enforce action availability server-side.

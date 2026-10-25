@@ -35,7 +35,7 @@ punctuation. This presentation preference applies to future screens too.
 
 ## Shared room behavior
 
-- The facilitator can also play, choose a game, start it, view answer counts,
+- The facilitator can also play, choose a game, start it, view named response progress,
   reveal results, start another round, switch games after ending the current one,
   remove a player, lock joining, transfer facilitation, and close the room.
 - The invite contains a room identifier/code only. Joining creates a participant
@@ -110,11 +110,24 @@ large answer controls, participant avatars, and restrained transitions. Give eac
 game recognizable visual identity while sharing navigation and controls.
 
 The key screens are create/join, lobby/invite, game selection, prompt selection,
-live round, reveal, game summary, and administration. Place the team roster and
-invitation panels above gameplay and the prompt library on desktop and mobile,
-so room controls remain easy to find. Keep answer controls large and facilitator
-actions reachable without covering answers. On desktop, use extra space for the
-participant roster.
+live round, reveal, game summary, and administration. Rooms have separate **Room**,
+**Game**, and facilitator-only **Prompts** views with persistent navigation. The
+team roster and invitation panels lead the Room view. A new game, round, or stage
+brings connected players into Game with heading focus and an announcement; ordinary
+answer/presence updates and same-stage reconnects preserve deliberate navigation.
+Opening an existing active game defaults to Game. Room and Prompts show the current
+game and a return action, and prompt filters/drafts survive navigation.
+
+In Game, prioritize the prompt and two answer choices. Use shorter choice controls
+(80px minimum on desktop, 64px on mobile, growing for long text); show Pass this
+round as a secondary text button with a 44px minimum touch target. Do not add
+redundant pass reassurance beside it. Show saved-answer/pass feedback. A named
+Answered/Waiting list includes all eligible players; passing counts as Answered
+without identifying it before reveal. Mark away players and distinguish late
+arrivals who can participate next round. Reveal remains possible with missing
+responses. Current results and advance controls lead; earlier results are available
+in a collapsed history. On desktop, place response progress alongside gameplay;
+on mobile, place it after answer controls.
 
 Include explicit loading, reconnecting, recovered, expired-room, removed-player,
 empty-result, and error states. After reconnecting, explain when a round has moved

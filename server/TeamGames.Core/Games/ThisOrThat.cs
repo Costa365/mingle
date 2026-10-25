@@ -160,6 +160,7 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
                 Choices = (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
                     ? choice : choice with { Name = "Removed player" }).ToArray()
             }).ToArray(), Pool(state, room).Count(p => !state.UsedPromptIds.Contains(p.Id)), Pool(state, room).Length,
-            state.Category, state.Tag, state.Search, viewer.Id == room.FacilitatorId ? state.UsedPromptIds.ToArray() : []);
+            state.Category, state.Tag, state.Search, viewer.Id == room.FacilitatorId ? state.UsedPromptIds.ToArray() : [],
+            eligible.Select(id => new ResponseStatusView(id, state.Answers.ContainsKey(id))).ToArray());
     }
 }

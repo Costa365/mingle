@@ -335,6 +335,41 @@ Docker/API-backed browser tests, plus type checking, lint, formatting, and the
 production build. Browser checks include keyboard navigation, accessibility,
 and narrow mobile layout. The required hosted CI check gates updating main.
 
+### Focused game workspace refinement — 2026-10-25
+
+Approved design: https://p.superdesign.dev/draft/3f088dfc-d0b5-4efd-8045-28dcb74df171
+The user additionally requested shorter choice buttons and removal of redundant
+pass reassurance. These refinements are implemented and locally verified.
+
+- [x] Separate Room, Game and facilitator Prompts views; roster/invite remain at
+  the top of Room, with persistent navigation and a return-to-game action.
+- [x] New sessions/rounds/stages focus Game for every connected player; ordinary
+  response, presence and same-stage reconnect updates preserve deliberate navigation.
+- [x] Server-projected named Answered/Waiting status reveals participation only;
+  passes count as Answered, removed members disappear, late arrivals wait for next round.
+- [x] Two shorter choices dominate; pass is a secondary text action with at least
+  a 44px touch target and saved feedback, without redundant reassurance.
+- [x] Core and component unit coverage, HTTP/hub/persistence functional coverage,
+  desktop/mobile browser flows, keyboard/reduced-motion/accessibility checks pass.
+
+Coverage: GameRulesTests/GameFunctionalTests for private status projection,
+roster changes and recovery; rooms.test.ts for transport validation; RoomPages and
+GamePanel component tests for view/focus/response behavior; game/rooms/prompts browser
+suites for actual navigation, remote start/round focus, permissions, shorter choices,
+pass privacy, prompt authoring and recovery through the real API.
+
+
+Local verification passed: 72 Core tests and 38 API unit/functional tests, 103
+frontend unit/component tests, 4 deployment-verifier unit tests, and all 52
+Docker/Nginx desktop/mobile browser tests. Generated contracts, backend/frontend
+formatting, TypeScript checks, lint and production builds passed. Real API restart
+and private HTTP/hub projections preserve response status without disclosing
+choices. A final two-browser-case rerun checked the shorter choice geometry,
+private pass status, headings, navigation and mobile accessibility after visual
+polish; a fixed short prompt makes size assertions deterministic while long text
+can grow naturally. The local preview was rebuilt after a stopped-API data/key
+backup. Required hosted CI gates updating protected main.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.

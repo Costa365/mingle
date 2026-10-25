@@ -236,7 +236,9 @@ test('API restart reconnects existing room members and preserves ownership', asy
   }
 })
 
-test('team and invitation panels precede gameplay and the prompt library', async ({ page }) => {
+test('Room keeps team and invitations at the top while Game and Prompts have dedicated views', async ({
+  page,
+}) => {
   await host(page)
   const team = page.getByRole('region', { name: /Your team/ })
   const invite = page.getByRole('complementary', { name: 'Bring your people' })
@@ -260,10 +262,17 @@ test('team and invitation panels precede gameplay and the prompt library', async
   await expect(page.getByRole('button', { name: 'Start This or That' })).toBeFocused()
   await page.getByRole('button', { name: 'Browse prompts' }).click()
   await expect(page.getByText('200 prompts · 200 unused and enabled')).toBeVisible()
+  await expect(team).toBeHidden()
+  await expect(invite).toBeHidden()
+  await page.getByRole('button', { name: /^Room \(/ }).click()
   await expectPanelsFirst()
   await page.getByRole('button', { name: 'Start This or That' }).click()
   await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
-  await expectPanelsFirst()
+  await expect(team).toBeHidden()
+  await page.getByRole('button', { name: /^Room \(/ }).click()
+  await expect(team).toBeVisible()
+  await expect(invite).toBeVisible()
+  await expect(game).toBeHidden()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await page.screenshot({
     path: `test-results/room-panels-first-${test.info().project.name}.png`,

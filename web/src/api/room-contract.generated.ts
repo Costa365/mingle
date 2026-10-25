@@ -44,6 +44,11 @@ export interface PlayerChoiceView {
   choice: string
 }
 
+export interface ResponseStatusView {
+  participantId: string
+  hasResponded: boolean
+}
+
 export interface GameCommand {
   commandId: string
   action: string
@@ -100,6 +105,7 @@ export interface GameView {
   tag?: string
   search?: string
   usedPromptIds?: string[]
+  responses?: ResponseStatusView[]
 }
 
 export interface ParticipantView {

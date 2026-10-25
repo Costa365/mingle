@@ -13,7 +13,7 @@ async function snapshot(page: Page, id: string): Promise<RoomSnapshot> {
   return (await (await page.request.get(`/api/rooms/${id}`)).json()) as RoomSnapshot
 }
 async function open(page: Page) {
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await expect(page.getByText('200 prompts · 200 unused and enabled')).toBeVisible()
 }
 async function custom(page: Page) {
@@ -44,9 +44,9 @@ test('facilitator browses launch content, filters and manually selects a built-i
     await expect(player.getByText('Connected', { exact: true })).toBeVisible()
     await expect(player.getByRole('button', { name: 'Browse prompts' })).toHaveCount(0)
     await page.route(`**/api/rooms/${id}/prompts`, (route) => route.abort(), { times: 1 })
-    await page.getByRole('button', { name: 'Browse prompts' }).click()
+    await page.getByRole('button', { name: 'Prompts', exact: true }).click()
     await expect(page.getByRole('alert')).toHaveText(/could not be loaded/)
-    await page.getByRole('button', { name: 'Browse prompts' }).click()
+    await page.getByRole('button', { name: /^Room \(/ }).click()
     await open(page)
     await expect(page.getByRole('alert')).toHaveCount(0)
     await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('Food')
@@ -63,7 +63,7 @@ test('facilitator browses launch content, filters and manually selects a built-i
     await expect(
       page.getByText('The selected prompt pool is exhausted. Reset it or browse another category.'),
     ).toBeVisible()
-    await page.getByRole('button', { name: 'Browse prompts' }).click()
+    await page.getByRole('button', { name: 'Prompts', exact: true }).click()
     await page.getByRole('button', { name: 'Reset pool and draw', exact: true }).click()
     await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
     expect((await snapshot(page, id)).game!.optionB).toBe('Coffee')
@@ -87,14 +87,16 @@ test('room authoring validates, survives restart and preserves round text throug
   await custom(page)
   await page.reload()
   await expect(page.getByText('Connected', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('Our team')
   await page.getByRole('button', { name: 'Use this prompt', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Build a kite', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await page.getByRole('button', { name: 'Edit prompt', exact: true }).click()
   await page.getByLabel('Option A', { exact: true }).fill('Paint a kite')
   await page.getByRole('button', { name: 'Save prompt', exact: true }).click()
   await expect(page.getByText('Paint a kite / Build a birdhouse')).toBeVisible()
+  await page.getByRole('button', { name: 'Return to game →' }).click()
   await expect(page.getByRole('button', { name: 'Build a kite', exact: true })).toBeVisible()
   await backend.stop()
   await expect(page.getByText('Reconnecting…', { exact: true })).toBeVisible()
@@ -103,17 +105,18 @@ test('room authoring validates, survives restart and preserves round text throug
   await expect(page.getByText('Connected', { exact: true })).toBeVisible()
   expect((await snapshot(page, id)).game!.optionA).toBe('Build a kite')
   await page.getByRole('button', { name: 'Reveal answers' }).click()
-  await page.getByRole('button', { name: 'Browse prompts' }).click() // Close library for the shared reset control.
   await page.getByRole('button', { name: 'Reset pool and draw', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Paint a kite', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await page.getByRole('button', { name: 'Delete prompt', exact: true }).click()
   await page.getByRole('button', { name: 'Confirm delete', exact: true }).click()
   await expect(page.getByText('Paint a kite / Build a birdhouse')).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue(
     'Our team',
   )
+  await page.getByRole('button', { name: 'Return to game →' }).click()
   await expect(page.getByRole('button', { name: 'Paint a kite', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({
@@ -134,9 +137,12 @@ test('random drawing respects filters, avoids repetition and lets future-game pr
   await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('Technology')
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
   await expect(page.getByText('Round 1 · Make your choice')).toBeVisible()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await expect(page.getByText('25 prompts · 24 unused and enabled')).toBeVisible()
+  await page.getByRole('button', { name: 'Return to game →' }).click()
   const first = (await snapshot(page, id)).game!
   await page.getByRole('button', { name: 'Reveal answers' }).click()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
   await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
   const second = (await snapshot(page, id)).game!
@@ -180,7 +186,7 @@ test('ambiguous prompt saves retry once and edits from another tab reject stale 
   try {
     await other.goto(`/rooms/${id}`)
     await expect(other.getByText('Connected', { exact: true })).toBeVisible()
-    await other.getByRole('button', { name: 'Browse prompts' }).click()
+    await other.getByRole('button', { name: 'Prompts', exact: true }).click()
     await other
       .getByRole('combobox', { name: 'Category', exact: true })
       .selectOption('Team favourites')
@@ -213,8 +219,8 @@ test('a confirmed save survives a failed library refresh without inviting anothe
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Retry prompt change' })).toHaveCount(0)
   await page.unroute(`**/api/rooms/${id}/prompts`)
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await page.getByRole('button', { name: /^Room \(/ }).click()
+  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
   await expect(page.getByText('Fold a paper kite / Build a birdhouse')).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   const response = await page.request.get(`/api/rooms/${id}/prompts?search=birdhouse`)

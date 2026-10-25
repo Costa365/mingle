@@ -90,6 +90,47 @@ describe('game controls', () => {
     expect(screen.getByText(/Your answer is saved/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Round results')).not.toBeInTheDocument()
   })
+  it('shows named response status without disclosing a pass, and separates late arrivals', () => {
+    show({
+      ownChoice: 'pass',
+      eligibleCount: 1,
+      responseCount: 1,
+      responses: [{ participantId: snapshot.youId, hasResponded: true }],
+    })
+    const responses = screen.getByRole('list', { name: 'Participant responses' })
+    expect(responses).toHaveTextContent('Host (you)Answered')
+    expect(responses).not.toHaveTextContent(/pass/i)
+    expect(screen.getByText('Joining next round: Player')).toBeVisible()
+    expect(screen.getByText('You passed. You can change it until reveal.')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Pass this round' })).toHaveClass('pass-button')
+    expect(
+      screen.getByRole('group', { name: 'Your choice' }).querySelectorAll('button'),
+    ).toHaveLength(2)
+    expect(screen.queryByText('You can always pass')).not.toBeInTheDocument()
+  })
+  it('labels away eligible players as waiting without removing them from progress', () => {
+    render(
+      <GamePanel
+        snapshot={{
+          ...snapshot,
+          participants: snapshot.participants.map((p) => ({ ...p, isOnline: false })),
+          game: {
+            ...game,
+            responses: snapshot.participants.map((p) => ({
+              participantId: p.id,
+              hasResponded: false,
+            })),
+          },
+        }}
+        disabled={false}
+        accept={accept}
+        refresh={refresh}
+      />,
+    )
+    expect(screen.getByRole('list', { name: 'Participant responses' })).toHaveTextContent(
+      'Player · AwayWaiting',
+    )
+  })
   it('disables input while unsynchronized and for late arrivals', () => {
     const view = show({}, true)
     expect(screen.getByRole('button', { name: 'Tea' })).toBeDisabled()
@@ -98,6 +139,7 @@ describe('game controls', () => {
     expect(screen.getByRole('button', { name: 'Tea' })).toBeDisabled()
     expect(screen.getByText(/You joined during this round/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reveal answers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Facilitator controls' })).not.toBeInTheDocument()
   })
   it.each([
     ['Reveal answers', 'reveal'],
@@ -204,4 +246,36 @@ describe('game controls', () => {
     expect(refresh).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: 'Retry game change' })).not.toBeInTheDocument()
   })
+})
+
+it('keeps the current reveal and advance controls ahead of collapsed history', () => {
+  const result = {
+    roundId: game.roundId,
+    number: 1,
+    prompt: 'Choose',
+    optionA: 'Tea',
+    optionB: 'Coffee',
+    skipped: true,
+    a: 0,
+    b: 0,
+    passes: 0,
+    missing: 2,
+    percentA: 0,
+    percentB: 0,
+    choices: [],
+  }
+  show({
+    stage: 'revealed',
+    roundNumber: 2,
+    allowedActions: ['next', 'finish'],
+    results: [result, { ...result, roundId: crypto.randomUUID(), number: 2 }],
+  })
+  const current = screen.getByRole('heading', { name: 'Round 2 · Skipped' })
+  expect(screen.getByRole('heading', { name: 'Round 1 · Skipped' })).not.toBeVisible()
+  expect(
+    screen.getByRole('button', { name: 'Next round' }).compareDocumentPosition(current) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  const history = screen.getByText('Earlier rounds (1)').closest('details')!
+  expect(history).not.toHaveAttribute('open')
 })

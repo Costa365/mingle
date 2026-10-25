@@ -7,12 +7,13 @@ namespace TeamGames.Core.Games;
 public sealed record GameCommand(Guid CommandId, string Action, Guid? SessionId = null, Guid? RoundId = null,
     long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0, string? PromptId = null, string? Category = null, string? Tag = null, string? Search = null, bool ResetPool = false);
 public sealed record PlayerChoiceView(Guid ParticipantId, string Name, string Choice);
+public sealed record ResponseStatusView(Guid ParticipantId, bool HasResponded);
 public sealed record RoundResult(Guid RoundId, int Number, string Prompt, string OptionA, string OptionB,
     bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB, IReadOnlyList<PlayerChoiceView> Choices);
 public sealed record GameView(Guid SessionId, string GameId, Guid RoundId, int RoundNumber, long StageRevision,
     string Stage, string Prompt, string OptionA, string OptionB, int EligibleCount, int ResponseCount,
     bool Eligible, string? OwnChoice, long ResponseRevision, IReadOnlyList<string> AllowedActions,
-    IReadOnlyList<RoundResult> Results, int RemainingPrompts = 0, int PoolSize = 0, string Category = "", string Tag = "", string Search = "", IReadOnlyList<string>? UsedPromptIds = null);
+    IReadOnlyList<RoundResult> Results, int RemainingPrompts = 0, int PoolSize = 0, string Category = "", string Tag = "", string Search = "", IReadOnlyList<string>? UsedPromptIds = null, IReadOnlyList<ResponseStatusView>? Responses = null);
 public sealed class GameSession
 {
     public Guid Id { get; set; }

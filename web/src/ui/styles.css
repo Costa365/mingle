@@ -1111,10 +1111,6 @@ button:disabled {
   cursor: pointer;
   overflow-wrap: anywhere;
 }
-.choice-button:last-child {
-  grid-column: 1 / -1;
-  min-height: 3rem;
-}
 .choice-button.is-selected {
   border-color: #215e49;
   background: #e1eedb;
@@ -1193,7 +1189,7 @@ button:disabled {
   padding: 0.55rem;
   font: inherit;
 }
-.prompt-form h4,
+.prompt-form :is(h2, h4),
 .prompt-form .room-buttons {
   grid-column: 1 / -1;
 }
@@ -1231,7 +1227,7 @@ button:disabled {
   padding: 0.8rem 1rem 0.25rem;
   background: #eef1e6;
 }
-.prompt-results-toolbar h4 {
+.prompt-results-toolbar :is(h2, h4) {
   font-family: 'Manrope Variable', sans-serif;
   font-weight: 750;
   font-size: 14px;
@@ -1382,4 +1378,266 @@ button:disabled {
 
 .prompt-result-actions > [role='group'] {
   flex-basis: 100%;
+}
+
+/* Room workspace and focused gameplay */
+[hidden] {
+  display: none !important;
+}
+.workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding-block: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.workspace-identity {
+  font-family: 'Manrope Variable', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+}
+.workspace-nav {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workspace-tab {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.workspace-tab[aria-current='page'] {
+  background: #e4edc9;
+  color: var(--green);
+}
+.workspace-tab:hover {
+  background: #eef1e6;
+}
+#room-heading {
+  margin-block: 24px;
+}
+#room-heading:focus,
+#game-heading:focus,
+#prompts-heading:focus {
+  outline: none;
+}
+#room-heading,
+#game-heading,
+#prompts-heading {
+  scroll-margin-top: 100px;
+}
+.current-game-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: #e4edc9;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.game-panel.is-playing {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 0;
+}
+.is-playing #game-heading {
+  font-size: 32px;
+  letter-spacing: -1px;
+  margin-block: 0 12px;
+}
+.game-notice {
+  display: table;
+  border-radius: 24px;
+  padding: 8px 14px;
+  background: #e4edc9;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+.focused-game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+.game-main {
+  min-width: 0;
+}
+.game-main .round-progress {
+  margin-top: 0;
+  color: var(--green);
+}
+.game-panel .game-prompt {
+  overflow-wrap: anywhere;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin: 24px 0;
+}
+.game-choices {
+  margin: 24px 0 16px;
+}
+.choice-button {
+  min-height: 80px;
+  font-size: 20px;
+  padding: 16px;
+}
+.answer-feedback {
+  text-align: center;
+  color: var(--green);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pass-button {
+  display: block;
+  margin: 0 auto 20px;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+.pass-button[aria-pressed='true'] {
+  font-weight: 700;
+}
+.game-controls {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.response-sidebar {
+  padding: 24px;
+  background: #fffdf7;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  min-width: 0;
+}
+.response-sidebar h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.response-sidebar > p[role='status'] {
+  font-size: 14px;
+  color: var(--muted);
+}
+.response-list {
+  list-style: none;
+  margin: 20px 0;
+  padding: 0;
+}
+.response-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.response-list li > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.response-list small {
+  color: var(--muted);
+}
+.response-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: #f1f2ec;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.response-status.has-responded {
+  background: #e4edc9;
+  color: var(--green);
+}
+.workspace-prompts .prompt-library {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+.workspace-prompts #prompts-heading {
+  font-size: 28px;
+  letter-spacing: -1px;
+  margin-block: 20px;
+}
+.browse-prompts {
+  margin-top: 16px;
+}
+@media (max-width: 860px) {
+  .focused-game-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace-header {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  #room-heading,
+  #game-heading,
+  #prompts-heading {
+    scroll-margin-top: 150px;
+  }
+  .workspace-nav {
+    width: 100%;
+    margin-left: 0;
+    gap: 4px;
+  }
+  .workspace-tab {
+    padding: 8px 14px;
+  }
+  .workspace-identity {
+    font-size: 16px;
+  }
+  .is-playing #game-heading {
+    font-size: 28px;
+  }
+  .game-panel .game-prompt {
+    font-size: 28px;
+    margin-block: 20px;
+  }
+  .choice-button {
+    min-height: 64px;
+    padding: 14px;
+    font-size: 18px;
+  }
+  .response-sidebar {
+    padding: 20px;
+  }
+}
+.earlier-rounds {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.earlier-rounds summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 600;
+  min-height: 44px;
+  padding-block: 12px;
+}
+
+.response-sidebar .room-note {
+  overflow-wrap: anywhere;
 }
