@@ -37,7 +37,17 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     await join(one, room.code, 'One')
     await join(two, room.code, 'Two')
     await expect(page.getByText('Two', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Start This or That' }).click()
+    // Deliberately include 'one' in an answer: player identities must match their own label.
+    await page.getByRole('button', { name: 'Browse prompts' }).click()
+    const prompt = page
+      .getByRole('list', { name: 'Available prompts' })
+      .getByRole('listitem')
+      .filter({
+        has: page.getByText('Practice a little daily / Have one long hobby session', {
+          exact: true,
+        }),
+      })
+    await prompt.getByRole('button', { name: 'Use this prompt', exact: true }).click()
     await expect(one.getByRole('group', { name: 'Your choice' })).toBeVisible()
     const game = (await snapshot(page, room.id)).game!
     await Promise.all([
@@ -59,11 +69,15 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     await expect(two.getByText(`${game.optionB}: 1 vote (100%)`)).toBeVisible()
     await expect(one.getByText('1 passed · 1 unanswered')).toBeVisible()
     const choices = one.getByRole('list', { name: 'Player choices for round 1' })
-    await expect(choices.getByRole('listitem').filter({ hasText: 'Host' })).toHaveText(/No answer/)
-    await expect(choices.getByRole('listitem').filter({ hasText: 'One' })).toHaveText(/Passed/)
-    await expect(choices.getByRole('listitem').filter({ hasText: 'Two' })).toContainText(
-      game.optionB,
-    )
+    await expect(
+      choices.getByRole('listitem').filter({ has: one.locator('strong', { hasText: /^Host$/ }) }),
+    ).toHaveText(/No answer/)
+    await expect(
+      choices.getByRole('listitem').filter({ has: one.locator('strong', { hasText: /^One$/ }) }),
+    ).toHaveText(/Passed/)
+    await expect(
+      choices.getByRole('listitem').filter({ has: one.locator('strong', { hasText: /^Two$/ }) }),
+    ).toContainText(game.optionB)
     await expect(one.getByRole('button', { name: 'Next round' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Next round' }).click()
     await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()

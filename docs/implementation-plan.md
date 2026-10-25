@@ -313,6 +313,11 @@ formatting, production build, proxy/persistence checks and visual review. The
 new scrolling/layout case also passed independently against Vite. The existing
 required hosted CI check runs before this change can update protected main.
 
+Hosted verification additionally exposed a pre-existing named-reveal test that
+matched a player's name against the entire answer row. The regression now chooses
+a prompt containing the word “one” and matches each exact identity label, so
+answer text cannot be confused with the player named One.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.
