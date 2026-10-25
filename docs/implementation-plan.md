@@ -318,6 +318,23 @@ matched a player's name against the entire answer row. The regression now choose
 a prompt containing the word “one” and matches each exact identity label, so
 answer text cannot be confused with the player named One.
 
+### Room-panel placement refinement — 2026-10-25
+
+The team roster and invitation panels precede gameplay and the prompt library in
+both DOM and visual order. Existing desktop columns and mobile stacking remain;
+room-action errors/retry controls stay with the room panels. Invitation sharing
+remains available to participants as requested.
+
+Coverage: `RoomPages.test.tsx` verifies ordering for facilitators and participants;
+`rooms.spec.ts` checks desktop/mobile geometry, keyboard action order, and panel
+placement after opening the long library and starting a game. Verification uses
+the existing frontend unit and real Docker/API-backed browser suites.
+
+Local verification passed: all 96 frontend unit/component tests and all 50
+Docker/API-backed browser tests, plus type checking, lint, formatting, and the
+production build. Browser checks include keyboard navigation, accessibility,
+and narrow mobile layout. The required hosted CI check gates updating main.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.

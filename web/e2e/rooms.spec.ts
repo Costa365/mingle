@@ -235,3 +235,38 @@ test('API restart reconnects existing room members and preserves ownership', asy
     await context.close()
   }
 })
+
+test('team and invitation panels precede gameplay and the prompt library', async ({ page }) => {
+  await host(page)
+  const team = page.getByRole('region', { name: /Your team/ })
+  const invite = page.getByRole('complementary', { name: 'Bring your people' })
+  const game = page.getByRole('region', { name: 'This or That', exact: true })
+  async function expectPanelsFirst() {
+    const teamBox = await team.boundingBox()
+    const inviteBox = await invite.boundingBox()
+    const gameBox = await game.boundingBox()
+    expect(teamBox!.y + teamBox!.height).toBeLessThanOrEqual(gameBox!.y)
+    expect(inviteBox!.y + inviteBox!.height).toBeLessThanOrEqual(gameBox!.y)
+    if (test.info().project.name === 'desktop')
+      expect(Math.abs(teamBox!.y - inviteBox!.y)).toBeLessThanOrEqual(1)
+    else expect(teamBox!.y + teamBox!.height).toBeLessThanOrEqual(inviteBox!.y)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await expectPanelsFirst()
+  if (test.info().project.name === 'desktop')
+    await expect(page.getByRole('button', { name: 'Copy invite link' })).toBeInViewport()
+  await page.getByRole('button', { name: 'Lock joining', exact: true }).focus()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Start This or That' })).toBeFocused()
+  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await expect(page.getByText('200 prompts · 200 unused and enabled')).toBeVisible()
+  await expectPanelsFirst()
+  await page.getByRole('button', { name: 'Start This or That' }).click()
+  await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
+  await expectPanelsFirst()
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.screenshot({
+    path: `test-results/room-panels-first-${test.info().project.name}.png`,
+    fullPage: true,
+  })
+})

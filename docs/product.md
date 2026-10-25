@@ -110,9 +110,11 @@ large answer controls, participant avatars, and restrained transitions. Give eac
 game recognizable visual identity while sharing navigation and controls.
 
 The key screens are create/join, lobby/invite, game selection, prompt selection,
-live round, reveal, game summary, and administration. On mobile, prioritize the
-prompt, response, and current status; keep facilitator actions reachable without
-covering answers. On desktop, use extra space for the participant roster.
+live round, reveal, game summary, and administration. Place the team roster and
+invitation panels above gameplay and the prompt library on desktop and mobile,
+so room controls remain easy to find. Keep answer controls large and facilitator
+actions reachable without covering answers. On desktop, use extra space for the
+participant roster.
 
 Include explicit loading, reconnecting, recovered, expired-room, removed-player,
 empty-result, and error states. After reconnecting, explain when a round has moved

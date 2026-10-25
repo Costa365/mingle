@@ -88,6 +88,23 @@ describe('room entry', () => {
   })
 })
 describe('room lobby', () => {
+  it.each([room.youId, room.participants[1].id])(
+    'places team and invitations before gameplay for %s',
+    (youId) => {
+      lobby({
+        ...room,
+        youId,
+        allowedActions: youId === room.facilitatorId ? room.allowedActions : [],
+      })
+      const team = screen.getByRole('region', { name: /Your team/ })
+      const invite = screen.getByRole('complementary', { name: 'Bring your people' })
+      const game = screen.getByRole('region', { name: 'This or That' })
+      expect(team.compareDocumentPosition(game) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(invite.compareDocumentPosition(game) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeEnabled()
+    },
+  )
+
   it.each([
     ['Lock joining', 'lock', undefined, true],
     ['Remove Player', 'remove', room.participants[1].id, undefined],

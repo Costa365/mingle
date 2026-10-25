@@ -239,12 +239,6 @@ export function RoomLobby() {
         </div>
       )}
       {room.error && synchronized && <p role="alert">{room.error}</p>}
-      <GamePanel
-        snapshot={snapshot}
-        disabled={blocked}
-        accept={room.accept}
-        refresh={room.refresh}
-      />
       <div className="lobby-grid">
         <section className="lobby-roster" aria-labelledby="roster-heading">
           <h2 id="roster-heading">
@@ -367,6 +361,12 @@ export function RoomLobby() {
           Retry last change
         </button>
       )}
+      <GamePanel
+        snapshot={snapshot}
+        disabled={blocked}
+        accept={room.accept}
+        refresh={room.refresh}
+      />
       <div className="lobby-next">
         <div>
           <h2>Make yourself at home</h2>
