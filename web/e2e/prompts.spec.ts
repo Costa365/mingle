@@ -133,8 +133,9 @@ test('random drawing respects filters, avoids repetition and lets future-game pr
   await page.getByRole('combobox', { name: 'Game', exact: true }).selectOption('this-or-that')
   await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('Technology')
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
-  const first = (await snapshot(page, id)).game!
+  await expect(page.getByText('Round 1 · Make your choice')).toBeVisible()
   await expect(page.getByText('25 prompts · 24 unused and enabled')).toBeVisible()
+  const first = (await snapshot(page, id)).game!
   await page.getByRole('button', { name: 'Reveal answers' }).click()
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
   await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
