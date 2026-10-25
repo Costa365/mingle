@@ -21,3 +21,6 @@ artifacts/
 .idea/
 .DS_Store
 *.user
+
+# Local UI design context and canvas state
+.superdesign/

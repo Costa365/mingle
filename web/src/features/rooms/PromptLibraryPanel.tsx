@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { commandPrompt, getPrompts, RoomError } from '../../api/rooms'
 import type {
   GameCommand,
@@ -36,6 +36,9 @@ export function PromptLibraryPanel({
   refresh: () => Promise<unknown>
   choose: (selection: Partial<GameCommand>) => Promise<void>
 }) {
+  const listId = useId()
+  const headingId = `${listId}-heading`
+  const scrollHelpId = `${listId}-scroll-help`
   const [open, setOpen] = useState(false)
   const [prompts, setPrompts] = useState<PromptView[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -323,82 +326,105 @@ export function PromptLibraryPanel({
               </div>
             </form>
           )}
-          <ul className="prompt-results" aria-label="Available prompts">
-            {filtered.map((p) => (
-              <li key={p.id}>
-                <p>
-                  <strong>{p.optionA ? `${p.optionA} / ${p.optionB}` : p.text}</strong>
-                </p>
-                <p className="room-note">
-                  {p.category} · {p.source === 'room' ? 'Room prompt' : 'Built-in'}
-                  {p.used ? ' · Used' : ''}
-                  {!p.enabled ? ' · Disabled' : ''}
-                </p>
-                <div className="room-buttons">
-                  <button
-                    className="text-button"
-                    disabled={blocked || !playable || p.used || !p.enabled}
-                    onClick={() => {
-                      void choose({ promptId: p.id, category, tag, search })
-                    }}
-                  >
-                    Use this prompt
-                  </button>
-                  {p.source === 'room' && (
-                    <>
-                      <button
-                        className="text-button"
-                        disabled={blocked}
-                        onClick={() => {
-                          setEditing(p)
-                          setForm({
-                            gameId: p.gameId,
-                            category: p.category,
-                            tags: [...p.tags],
-                            text: p.text,
-                            optionA: p.optionA,
-                            optionB: p.optionB,
-                            enabled: p.enabled,
-                          })
-                          setError('')
-                        }}
-                      >
-                        Edit prompt
-                      </button>
-                      <button
-                        className="text-button"
-                        disabled={blocked}
-                        onClick={() => setConfirmDelete(p.id)}
-                      >
-                        Delete prompt
-                      </button>
-                      {confirmDelete === p.id && (
-                        <div role="group" aria-label="Confirm prompt deletion">
-                          <p>The current and historical rounds keep their saved text</p>
-                          <button
-                            className="text-button"
-                            disabled={blocked}
-                            onClick={() => {
-                              void save('delete', p)
-                            }}
-                          >
-                            Confirm delete
-                          </button>
-                          <button
-                            className="text-button"
-                            disabled={blocked}
-                            onClick={() => setConfirmDelete(null)}
-                          >
-                            Keep prompt
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <section className="prompt-results-frame" aria-labelledby={headingId}>
+            <div className="prompt-results-toolbar">
+              <h4 id={headingId}>Available prompts</h4>
+              <span>Scroll for more ↓</span>
+            </div>
+            <p id={scrollHelpId} className="prompt-scroll-help">
+              Scroll within the list, or focus it and use Page Up / Page Down
+            </p>
+            <div className="prompt-results-columns" aria-hidden="true">
+              <span>Prompt</span>
+              <span>Category &amp; tags</span>
+              <span>Action</span>
+            </div>
+            <ul
+              className="prompt-results"
+              aria-label="Available prompts"
+              aria-describedby={scrollHelpId}
+              tabIndex={0}
+            >
+              {filtered.map((p) => (
+                <li key={p.id} className="prompt-result-row">
+                  <p className="prompt-result-title">
+                    <strong>{p.optionA ? `${p.optionA} / ${p.optionB}` : p.text}</strong>
+                  </p>
+                  <div className="prompt-result-meta">
+                    <span className="prompt-category">{p.category}</span>
+                    {p.tags.length > 0 && <span className="prompt-tags">{p.tags.join(' · ')}</span>}
+                    <span className="prompt-source">
+                      {p.source === 'room' ? 'Room prompt' : 'Built-in'}
+                      {p.used ? ' · Used' : ''}
+                      {!p.enabled ? ' · Disabled' : ''}
+                    </span>
+                  </div>
+                  <div className="room-buttons prompt-result-actions">
+                    <button
+                      className="text-button"
+                      disabled={blocked || !playable || p.used || !p.enabled}
+                      onClick={() => {
+                        void choose({ promptId: p.id, category, tag, search })
+                      }}
+                    >
+                      Use this prompt
+                    </button>
+                    {p.source === 'room' && (
+                      <>
+                        <button
+                          className="text-button"
+                          disabled={blocked}
+                          onClick={() => {
+                            setEditing(p)
+                            setForm({
+                              gameId: p.gameId,
+                              category: p.category,
+                              tags: [...p.tags],
+                              text: p.text,
+                              optionA: p.optionA,
+                              optionB: p.optionB,
+                              enabled: p.enabled,
+                            })
+                            setError('')
+                          }}
+                        >
+                          Edit prompt
+                        </button>
+                        <button
+                          className="text-button"
+                          disabled={blocked}
+                          onClick={() => setConfirmDelete(p.id)}
+                        >
+                          Delete prompt
+                        </button>
+                        {confirmDelete === p.id && (
+                          <div role="group" aria-label="Confirm prompt deletion">
+                            <p>The current and historical rounds keep their saved text</p>
+                            <button
+                              className="text-button"
+                              disabled={blocked}
+                              onClick={() => {
+                                void save('delete', p)
+                              }}
+                            >
+                              Confirm delete
+                            </button>
+                            <button
+                              className="text-button"
+                              disabled={blocked}
+                              onClick={() => setConfirmDelete(null)}
+                            >
+                              Keep prompt
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
           {loaded && filtered.length === 0 && <p>No prompts match these filters</p>}
           {loadError && (
             <p role="alert" className="room-error">

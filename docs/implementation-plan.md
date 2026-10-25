@@ -287,6 +287,32 @@ Decisions:
 - The full libraries for the other three prompt-driven games can be browsed and
   prepared now. Their gameplay remains M4; Two Truths and a Lie is player-authored.
 
+### Prompt-list usability refinement — 2026-10-25
+
+The approved Superdesign draft uses one desktop row for the prompt, category/tags,
+and action, with readable stacked mobile rows. A named, bordered scroll region,
+visible column labels, stable scrollbar gutter, native scrolling, keyboard focus
+and concise scroll help make the list boundary and available actions clear.
+Selection, authorization and round pacing retain their existing behavior.
+
+Acceptance criteria and coverage:
+
+- Unit: `PromptLibraryPanel.test.tsx` verifies the named list, keyboard focus,
+  accessible scroll description, visible tags/status, and action availability.
+- Functional: `prompts.spec.ts` verifies three desktop columns, compact row height
+  and at least eight visible desktop rows; mobile stacking/no overflow; native
+  Page Down/End and pointer scrolling; axe checks and actual API-backed selection
+  and authoring regressions.
+- Design: desktop/mobile draft rendering and keyboard scrolling were checked;
+  the user approved the draft before implementation. The local design context
+  and resume state are ignored under `.superdesign/`.
+
+Local verification passed on 2026-10-25: 94 frontend unit/component tests,
+all 48 Docker/Nginx desktop/mobile browser tests, TypeScript checking, lint,
+formatting, production build, proxy/persistence checks and visual review. The
+new scrolling/layout case also passed independently against Vite. The existing
+required hosted CI check runs before this change can update protected main.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.

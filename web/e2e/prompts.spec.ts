@@ -220,3 +220,56 @@ test('a confirmed save survives a failed library refresh without inviting anothe
   const response = await page.request.get(`/api/rooms/${id}/prompts?search=birdhouse`)
   expect((await response.json()).prompts).toHaveLength(1)
 })
+
+test('prompt list has compact desktop rows and supports keyboard and pointer scrolling', async ({
+  page,
+}) => {
+  await host(page)
+  await open(page)
+  const region = page.getByRole('region', { name: 'Available prompts', exact: true })
+  const list = region.getByRole('list', { name: 'Available prompts', exact: true })
+  await expect(list).toHaveAttribute('tabindex', '0')
+  await expect(region.getByText('Scroll for more ↓')).toBeVisible()
+  const dimensions = await list.evaluate((element) => ({
+    height: element.clientHeight,
+    content: element.scrollHeight,
+  }))
+  expect(dimensions.content).toBeGreaterThan(dimensions.height)
+  const row = list.getByRole('listitem').first()
+  const title = await row.locator('.prompt-result-title').boundingBox()
+  const metadata = await row.locator('.prompt-result-meta').boundingBox()
+  const action = await row.getByRole('button', { name: 'Use this prompt' }).boundingBox()
+  if (test.info().project.name === 'desktop') {
+    expect(title!.x + title!.width).toBeLessThan(metadata!.x)
+    expect(metadata!.x + metadata!.width).toBeLessThan(action!.x)
+    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(64)
+    expect(
+      Math.floor(dimensions.height / (await row.boundingBox())!.height),
+    ).toBeGreaterThanOrEqual(8)
+  } else {
+    expect(title!.y + title!.height).toBeLessThanOrEqual(metadata!.y)
+    expect(metadata!.y + metadata!.height).toBeLessThanOrEqual(action!.y)
+  }
+  await list.focus()
+  await page.keyboard.press('PageDown')
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  // Wait for native keyboard scrolling to settle before checking pointer scrolling.
+  await page.keyboard.press('End')
+  await expect
+    .poll(() =>
+      list.evaluate(
+        (element) => Math.ceil(element.scrollTop + element.clientHeight) >= element.scrollHeight,
+      ),
+    )
+    .toBe(true)
+  const before = await list.evaluate((element) => element.scrollTop)
+  await list.hover()
+  await page.mouse.wheel(0, -250)
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeLessThan(before)
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: `test-results/prompt-list-${test.info().project.name}.png`,
+    fullPage: true,
+  })
+})

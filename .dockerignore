@@ -13,3 +13,5 @@ artifacts
 .env
 .env.*
 *.db*
+
+.superdesign

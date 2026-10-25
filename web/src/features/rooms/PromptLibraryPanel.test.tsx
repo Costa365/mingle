@@ -232,3 +232,24 @@ it('keeps a confirmed save separate from a failed library refresh', async () => 
   expect(accept).toHaveBeenCalledOnce()
   expect(screen.queryByRole('button', { name: 'Retry prompt change' })).not.toBeInTheDocument()
 })
+
+it('labels the scrollable prompt list and exposes category, tags and status beside each action', async () => {
+  vi.mocked(getPrompts).mockResolvedValue({
+    roomVersion: room.version,
+    prompts: [prompts[0], { ...prompts[1], used: true, enabled: false }],
+  })
+  await open()
+  const region = screen.getByRole('region', { name: 'Available prompts' })
+  const list = within(region).getByRole('list', { name: 'Available prompts' })
+  expect(list).toHaveAttribute('tabindex', '0')
+  expect(list).toHaveAccessibleDescription(
+    'Scroll within the list, or focus it and use Page Up / Page Down',
+  )
+  const rows = within(list).getAllByRole('listitem')
+  expect(within(rows[0]).getByText('Travel')).toBeInTheDocument()
+  expect(within(rows[0]).getByText('calm')).toBeInTheDocument()
+  expect(within(rows[0]).getByRole('button', { name: 'Use this prompt' })).toBeEnabled()
+  expect(within(rows[1]).getByText(/Room prompt.*Used.*Disabled/)).toBeInTheDocument()
+  expect(within(rows[1]).getByRole('button', { name: 'Use this prompt' })).toBeDisabled()
+  expect(within(rows[1]).getByRole('button', { name: 'Edit prompt' })).toBeEnabled()
+})
