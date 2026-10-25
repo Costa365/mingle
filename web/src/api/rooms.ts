@@ -2,6 +2,9 @@ import type * as Contract from './room-contract.generated'
 
 export type Participant = Contract.ParticipantView
 export type EntryRequest = Contract.EntryRequest
+export type PromptView = Contract.PromptView
+export type PromptInput = Contract.PromptInput
+export type PromptCommand = Contract.PromptCommand
 export type GameCommand = Contract.GameCommand
 export type GameView = Contract.GameView
 export interface RoomSnapshot extends Omit<Contract.RoomSnapshot, 'status'> {
@@ -91,7 +94,7 @@ function parseGame(g: Contract.GameView) {
     ![g.prompt, g.optionA, g.optionB].every((s) => typeof s === 'string' && s.length > 0) ||
     !Array.isArray(g.allowedActions) ||
     !g.allowedActions.every((a) =>
-      ['answer', 'reveal', 'skip', 'next', 'finish', 'lobby'].includes(a),
+      ['answer', 'reveal', 'skip', 'next', 'finish', 'lobby', 'reset'].includes(a),
     ) ||
     !Array.isArray(g.results) ||
     !g.results.every(
@@ -175,7 +178,7 @@ export function ensureSession(): Promise<string> {
 
 async function mutate(
   path: string,
-  payload: EntryRequest | RoomCommand | GameCommand,
+  payload: EntryRequest | RoomCommand | GameCommand | PromptCommand,
 ): Promise<CommandResult> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const token = await ensureSession()
@@ -211,4 +214,37 @@ export async function getRoom(id: string, signal?: AbortSignal): Promise<RoomSna
       : AbortSignal.timeout(10_000),
   })
   return parseSnapshot(await read<unknown>(response))
+}
+
+export const commandPrompt = (id: string, command: PromptCommand) =>
+  mutate(`/api/rooms/${id}/prompts`, command)
+export async function getPrompts(id: string, signal?: AbortSignal): Promise<Contract.PromptPage> {
+  const result = await read<Contract.PromptPage>(
+    await fetch(`/api/rooms/${id}/prompts`, {
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+        : AbortSignal.timeout(10_000),
+    }),
+  )
+  if (
+    !Number.isSafeInteger(result.roomVersion) ||
+    !Array.isArray(result.prompts) ||
+    !result.prompts.every(
+      (p) =>
+        p &&
+        typeof p.id === 'string' &&
+        ['this-or-that', 'would-you-rather', 'never-have-i-ever', 'most-likely-to'].includes(
+          p.gameId,
+        ) &&
+        [p.category, p.text, p.optionA, p.optionB].every((s) => typeof s === 'string') &&
+        Array.isArray(p.tags) &&
+        p.tags.every((t) => typeof t === 'string') &&
+        ['built-in', 'room', 'administrator'].includes(p.source) &&
+        typeof p.enabled === 'boolean' &&
+        typeof p.used === 'boolean' &&
+        Number.isSafeInteger(p.revision),
+    )
+  )
+    throw new RoomError('invalid_response', 'The prompt library response could not be read')
+  return result
 }

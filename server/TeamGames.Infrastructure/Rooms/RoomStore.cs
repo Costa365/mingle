@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Prompts;
 using TeamGames.Core.Games;
 using TeamGames.Infrastructure.Persistence;
 
@@ -35,6 +36,7 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
             throw new RoomException("membership_revoked", "Your guest session has expired", 401);
         var room = await Load(id);
         var viewer = Access(room, guestId);
+        await PopulatePrompts(room);
         var online = presence.Read(id);
         return new(1, room.Id, room.Code, room.Version, online.Revision, presence.Epoch, room.Status, room.JoinLocked, settings.Capacity,
             viewer.Id, room.FacilitatorId,
@@ -132,7 +134,7 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
     public Task<CommandResult> PlayAsync(Guid roomId, Guid guestId, GameCommand command) =>
         Execute(roomId, guestId, command.CommandId, command, (room, actor) => games.Apply(room, actor, command, Now));
 
-    private async Task<CommandResult> Execute(Guid roomId, Guid guestId, Guid commandId, object command, Action<Room, Membership> apply)
+    private async Task<CommandResult> Execute(Guid roomId, Guid guestId, Guid commandId, object command, Action<Room, Membership>? apply, Func<Room, Membership, Task>? applyAsync = null)
     {
         ValidateId(commandId);
         long version;
@@ -150,7 +152,9 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
             if (receipt is not null) version = receipt.AppliedVersion;
             else
             {
-                apply(room, actor);
+                await PopulatePrompts(room);
+                if (applyAsync is not null) await applyAsync(room, actor);
+                else apply!(room, actor);
                 AddReceipt(guestId, commandId, fingerprint, room);
                 await database.SaveChangesAsync();
                 version = room.Version;
@@ -160,6 +164,68 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
         finally { writer.Gate.Release(); }
         return new(await GetAsync(roomId, guestId), version, replayed);
     }
+
+    private async Task PopulatePrompts(Room room) => room.PromptPool = await database.Prompts.AsNoTracking()
+        .Where(p => p.Enabled && (p.RoomId == null || p.RoomId == room.Id)).OrderBy(p => p.Id).ToArrayAsync();
+
+    public async Task<PromptPage> PromptsAsync(Guid roomId, Guid guestId, string? gameId, string? category, string? tag, string? search)
+    {
+        if ((search?.Length ?? 0) > 120 || (category?.Length ?? 0) > 48 || (tag?.Length ?? 0) > 32)
+            throw new RoomException("invalid_filter", "Shorten the prompt filters");
+        var room = await Load(roomId);
+        var actor = Access(room, guestId);
+        GameModules.Facilitator(room, actor);
+        if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
+        if (gameId is not null && !PromptRules.GameIds.Contains(gameId)) throw new RoomException("invalid_filter", "Choose a supported prompt game");
+        await PopulatePrompts(room);
+        var used = games.Project(room, actor)?.UsedPromptIds ?? [];
+        var all = await database.Prompts.AsNoTracking().Where(p => p.RoomId == null || p.RoomId == roomId).OrderBy(p => p.Id).ToArrayAsync();
+        return new(room.Version, all.Where(p => PromptRules.Matches(p, gameId ?? p.GameId, category, tag, search) ||
+            (!p.Enabled && p.RoomId == roomId && PromptRules.Matches(CloneEnabled(p), gameId ?? p.GameId, category, tag, search)))
+            .Select(p => PromptRules.View(p, used.Contains(p.Id))).ToArray());
+    }
+    private static Prompt CloneEnabled(Prompt prompt) => new()
+    {
+        GameId = prompt.GameId,
+        Enabled = true,
+        Category = prompt.Category,
+        Tags = prompt.Tags,
+        Text = prompt.Text,
+        OptionA = prompt.OptionA,
+        OptionB = prompt.OptionB
+    };
+
+    public Task<CommandResult> EditPromptAsync(Guid roomId, Guid guestId, PromptCommand command) =>
+        Execute(roomId, guestId, command.CommandId, command, null, async (room, actor) =>
+        {
+            GameModules.Facilitator(room, actor);
+            if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
+            if (room.Version != command.ExpectedVersion) throw new RoomException("version_changed", "The room changed; review it and try again", 409);
+            Prompt? current = null;
+            if (command.Action is "edit" or "delete")
+            {
+                current = await database.Prompts.SingleOrDefaultAsync(p => p.Id == command.PromptId && p.RoomId == roomId)
+                    ?? throw new RoomException("prompt_missing", "That room prompt was not found", 404);
+                if (current.Revision != command.PromptRevision) throw new RoomException("prompt_changed", "The prompt changed; review it and try again", 409);
+            }
+            if (command.Action == "delete") database.Prompts.Remove(current!);
+            else if (command.Action is "create" or "edit")
+            {
+                var candidate = PromptRules.Create(command.Input ?? throw new RoomException("invalid_prompt", "Enter prompt content"),
+                    current?.Id ?? Guid.NewGuid().ToString(), roomId);
+                if (await database.Prompts.AnyAsync(p => p.Id != candidate.Id && (p.RoomId == null || p.RoomId == roomId) && p.NormalizedKey == candidate.NormalizedKey))
+                    throw new RoomException("duplicate_prompt", "That prompt already exists in this room's library", 409);
+                if (current is null) database.Prompts.Add(candidate);
+                else
+                {
+                    database.Entry(current).CurrentValues.SetValues(candidate);
+                    current.Revision = command.PromptRevision + 1;
+                }
+            }
+            else throw new RoomException("invalid_command", "That prompt action is not supported");
+            room.Version++;
+            room.LastActivityTicks = Now;
+        });
 
     public async Task<Guid[]> SweepAsync()
     {

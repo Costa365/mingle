@@ -1161,3 +1161,70 @@ button:disabled {
 .revealed-choices span {
   text-align: right;
 }
+
+.prompt-library {
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}
+.prompt-filters,
+.prompt-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.prompt-filters label,
+.prompt-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+.prompt-library input,
+.prompt-library select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.8rem;
+  border: 1px solid #8c9a8c;
+  border-radius: 0.45rem;
+  background: #fffdf7;
+  color: #173d32;
+  padding: 0.55rem;
+  font: inherit;
+}
+.prompt-form h4,
+.prompt-form .room-buttons {
+  grid-column: 1 / -1;
+}
+.prompt-form .prompt-enabled {
+  display: flex;
+  align-items: center;
+}
+.prompt-enabled input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+}
+.prompt-results {
+  list-style: none;
+  padding: 0;
+  max-height: 28rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.prompt-results > li {
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+}
+.prompt-results p {
+  overflow-wrap: anywhere;
+}
+.prompt-library .room-buttons {
+  flex-wrap: wrap;
+}
+@media (max-width: 540px) {
+  .prompt-filters,
+  .prompt-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { PromptLibraryPanel } from './PromptLibraryPanel'
 import { commandGame, RoomError } from '../../api/rooms'
 import type { GameCommand, RoomSnapshot } from '../../api/rooms'
 
@@ -23,7 +24,12 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
   const [pending, setPending] = useState<GameCommand | null>(null)
   const sending = useRef(false)
   const game = snapshot.game
-  async function act(action: string, choice?: string, retry?: GameCommand) {
+  async function act(
+    action: string,
+    choice?: string,
+    retry?: GameCommand,
+    selection?: Partial<GameCommand>,
+  ) {
     if (disabled || sending.current) return
     sending.current = true
     setBusy(true)
@@ -38,6 +44,7 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
       roundId: game?.roundId,
       stageRevision: game?.stageRevision ?? 0,
       responseRevision: game?.responseRevision ?? 0,
+      ...selection,
     }
     setPending(command)
     try {
@@ -77,7 +84,9 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
             Pick a side, discover what you share, and talk about the differences. Passing is always
             welcome.
           </p>
-          <p className="room-note">A starter deck of 12 pairs · Play solo or with your team</p>
+          <p className="room-note">
+            200 built-in pairs across eight categories · Play solo or with your team
+          </p>
           {snapshot.youId === snapshot.facilitatorId ? (
             <button
               className="button"
@@ -202,6 +211,7 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
             {control('reveal', 'Reveal answers')}
             {control('skip', 'Skip round')}
             {control('next', 'Next round')}
+            {control('reset', 'Reset pool and draw')}
             {control('finish', 'Finish game')}
             {control('lobby', 'Return to lobby')}
           </div>
@@ -214,6 +224,22 @@ function ThisOrThatPanel({ snapshot, disabled, accept, refresh }: GamePanelProps
             <p>Waiting for your facilitator to continue</p>
           )}
         </>
+      )}
+      {snapshot.youId === snapshot.facilitatorId && (
+        <PromptLibraryPanel
+          snapshot={snapshot}
+          disabled={blocked}
+          accept={accept}
+          refresh={refresh}
+          choose={(selection) => act(game ? 'next' : 'start', undefined, undefined, selection)}
+        />
+      )}
+      {game?.stage === 'revealed' && game.remainingPrompts === 0 && (
+        <p className="room-note">
+          {game.poolSize === 0
+            ? 'No enabled prompts match this pool. Browse another category or add a prompt.'
+            : 'The selected prompt pool is exhausted. Reset it or browse another category.'}
+        </p>
       )}
       {error && (
         <p className="room-error" role="alert">

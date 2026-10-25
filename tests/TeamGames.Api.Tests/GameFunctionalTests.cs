@@ -266,7 +266,7 @@ public sealed class GameFunctionalTests : IDisposable
     private static void AssertPublicGame(JsonElement game)
     {
         string[] allowed = ["sessionId", "gameId", "roundId", "roundNumber", "stageRevision", "stage", "prompt", "optionA", "optionB",
-            "eligibleCount", "responseCount", "eligible", "ownChoice", "responseRevision", "allowedActions", "results"];
+            "eligibleCount", "responseCount", "eligible", "ownChoice", "responseRevision", "allowedActions", "results", "remainingPrompts", "poolSize", "category", "tag", "search", "usedPromptIds"];
         Assert.Equal(allowed.Order(), game.EnumerateObject().Select(p => p.Name).Order());
     }
     private static async Task<RoomSnapshot> Until(ChannelReader<RoomSnapshot> reader, Func<RoomSnapshot, bool> predicate)

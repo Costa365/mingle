@@ -7,6 +7,7 @@ public sealed class DatabaseInitializer(TeamGamesDbContext database, TimeProvide
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await database.Database.MigrateAsync(cancellationToken);
+        await TeamGames.Infrastructure.Prompts.PromptSeeder.SeedAsync(database, cancellationToken: cancellationToken);
         await database.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
 
         if (!await database.Installations.AnyAsync(cancellationToken))

@@ -11,7 +11,7 @@ rooms, play multiple rounds, manage their gathering, and recover membership and
 private game state after API restart. M2 passed the
 [required GitHub check](https://github.com/Costa365/mingle/actions/runs/40116725312)
 on implementation commit `4bd98cc`, including named choices after reveal.
-M3–M6 remain unimplemented; M3 is next.
+M3 is being implemented; M4–M6 remain planned.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -224,6 +224,46 @@ Depends on M2.
 **Acceptance:** A facilitator can choose a prompt, draw a random prompt, and play a
 newly authored prompt. Refresh/restart preserves it. Pool exhaustion offers a reset.
 Room prompts never leak into another room; seed reruns preserve edited content.
+
+### M3 implementation and verification — 2026-10-25
+
+Implementation is in progress; M3 items stay unchecked until local and hosted
+unit and functional gates pass.
+
+| Acceptance | Unit coverage | Functional coverage |
+| --- | --- | --- |
+| 350 original prompts, typed shapes, stable IDs, eight This or That categories | `PromptRulesTests` launch/validation cases | Real startup and library API count/filter tests |
+| Category/tag/search browsing; manual and random draws avoid repeats | `PromptRulesTests` matching and selection; prompt panel component tests | `PromptFunctionalTests`, `prompts.spec.ts` filter/manual/random flows |
+| Facilitator room-local create/edit/disable/delete; validate duplicates, lengths and shapes | Domain validation/normalization and component form/error/confirmation cases | Actual API permissions, CSRF/origin, duplicate and revision tests; browser authoring |
+| Round text is immutable after edits or deletion; restart restores custom content and usage | Module snapshot/reset and M2 usage migration tests | Real API restart with a custom round, edits/deletion, and browser restart |
+| Exhaustion offers explicit reset or new filters | Module reset and prompt panel exhausted-state tests | Custom one-prompt pool reset through API and browser |
+| Repeatable seeds preserve manual edits, disabled content, conflicts and room prompts | Seed fingerprint guard and normalized conflict tests | Seed rerun/update tests against real SQLite |
+
+Editorial review of every entry is recorded in
+[prompt-editorial-review.md](prompt-editorial-review.md). Counts and schema checks
+support that review but do not substitute for reading the content.
+
+Decisions:
+
+- Prompts use stable IDs and a dedicated SQLite table, with a nullable owning room
+  and scoped duplicate indexes. Only the facilitator can browse or change their
+  room's library; built-ins are read-only in the room UI. Room deletion cascades
+  its custom prompts, and custom content never becomes global automatically.
+- Prompt commands share authorization, expected room version, actor-scoped UUID
+  receipts, the single writer transaction, and post-commit per-viewer publication.
+  Prompt revisions additionally protect edit/delete operations.
+- Modules receive enabled global/room prompts as domain input. The room store,
+  hub, and reconnect code do not select prompts by game-specific branches.
+  Every round freezes its text/options before acknowledgement.
+- This or That remembers stable used IDs per session. The M2 twelve-item index
+  list migrates to its corresponding stable IDs. Exhaustion reset clears usage
+  only for the selected eligible pool, while historical results and round
+  numbering remain intact. Changing filters preserves other pools' usage.
+- Seed fingerprints identify untouched rows. Updates preserve administrator edits
+  and disabling; conflicting seed changes are skipped instead of overwriting
+  content or breaking startup. No administrator UI is introduced before M5.
+- The full libraries for the other three prompt-driven games can be browsed and
+  prepared now. Their gameplay remains M4; Two Truths and a Lie is player-authored.
 
 ## M4 — Remaining games through the module interface
 

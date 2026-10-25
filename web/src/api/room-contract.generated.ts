@@ -1,5 +1,43 @@
 // Generated from TeamGames.Core room DTOs. Run the contracts tool to update.
 
+export interface PromptInput {
+  gameId: string
+  category: string
+  tags: string[]
+  text: string
+  optionA?: string
+  optionB?: string
+  enabled?: boolean
+}
+
+export interface PromptCommand {
+  commandId: string
+  expectedVersion: number
+  action: string
+  input?: PromptInput | null
+  promptId?: string | null
+  promptRevision?: number
+}
+
+export interface PromptView {
+  id: string
+  gameId: string
+  category: string
+  tags: string[]
+  text: string
+  optionA: string
+  optionB: string
+  source: string
+  enabled: boolean
+  revision: number
+  used: boolean
+}
+
+export interface PromptPage {
+  roomVersion: number
+  prompts: PromptView[]
+}
+
 export interface PlayerChoiceView {
   participantId: string
   name: string
@@ -16,6 +54,11 @@ export interface GameCommand {
   choice?: string | null
   gameId?: string | null
   expectedVersion?: number
+  promptId?: string | null
+  category?: string | null
+  tag?: string | null
+  search?: string | null
+  resetPool?: boolean
 }
 
 export interface RoundResult {
@@ -51,6 +94,12 @@ export interface GameView {
   responseRevision: number
   allowedActions: string[]
   results: RoundResult[]
+  remainingPrompts?: number
+  poolSize?: number
+  category?: string
+  tag?: string
+  search?: string
+  usedPromptIds?: string[]
 }
 
 export interface ParticipantView {

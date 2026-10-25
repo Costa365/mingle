@@ -87,13 +87,13 @@ or random values. It returns a new state or a domain error. It must handle force
 advance, zero answers, passes, removed players, and invalid/stale commands.
 
 M2 implements `IGameModule` / `GameModules` with deterministic injected random
-selection and the This or That module. `Rooms.GameState` is a version 2 JSON
+selection and the This or That module. `Rooms.GameState` is a version 3 JSON
 envelope of sessions; each module owns its state representation. Completed rounds
 retain prompt text, roster and submissions separately from their immutable public
 results. Version 1 aggregate-only results are read with empty named-choice lists;
 new revealed rounds snapshot each eligible player’s choice, and projection replaces
-removed participants’ names with a neutral label. The envelope advances to version
-2 on the next accepted mutation. Keep old state readable with an explicit migration
+removed participants’ names with a neutral label. The envelope accepts versions 1 and 2 and advances to version 3 on the next
+accepted mutation, adding stable prompt usage and saved filters. Keep old state readable with an explicit migration
 when its schema or prompt identifiers change. Room deletion cascades by deleting this
 owned state with the room. No runtime type names are deserialized.
 
@@ -102,6 +102,24 @@ aggregate response counts, server-authorized actions, and finalized result DTOs.
 The command includes session/round IDs, stage revision and own response revision.
 Answers do not compare the shared room version. Start compares the lobby version;
 all accepted commands still increment the room version for snapshot ordering.
+
+M3 adds a typed `Prompts` table with stable IDs, game/category/tag metadata,
+text/options, source, enabled status, ownership, revision, and seed fingerprint.
+Room prompt foreign keys cascade on room deletion. Normalized duplicate indexes
+separate the shared library and each room; validation also rejects room duplicates
+of shared prompts. Browsing and room authoring require the current facilitator.
+
+Enabled global and room prompts are supplied as domain input to game modules.
+This or That selects from category/tag/search filters, stores selected text/options
+in the round, and persists used stable IDs. Its old twelve-index usage migrates
+on read without changing active or historical text. Reset removes usage only for
+the exhausted filtered pool. Rounds retain their numbering across resets.
+
+Prompt commands share the room command receipt and transaction boundary. Library
+edits increment the room version and prompt revision, then publish safe snapshots.
+Seed updates apply only to untouched shared rows, preserve edits/disabling, and
+skip conflicting content. Administrator UI and other gameplay modules remain
+later milestones.
 
 ## Identity and authorization
 

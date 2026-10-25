@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Prompts;
 using TeamGames.Core.Games;
 using TeamGames.Infrastructure.Persistence;
 using TeamGames.Infrastructure.Rooms;
@@ -139,6 +140,15 @@ public static class RoomEndpoints
         app.MapPost("/api/rooms/{id:guid}/game", async (Guid id, GameCommand command, HttpContext context, RoomStore store, RoomPublisher publisher) =>
         {
             var result = await store.PlayAsync(id, GuestAuthentication.GuestId(context.User), command);
+            await publisher.PublishAsync(id);
+            return Results.Ok(result);
+        }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();
+        app.MapGet("/api/rooms/{id:guid}/prompts", async (Guid id, string? gameId, string? category, string? tag, string? search, HttpContext context, RoomStore store) =>
+            Results.Ok(await store.PromptsAsync(id, GuestAuthentication.GuestId(context.User), gameId, category, tag, search)))
+            .RequireAuthorization().RequireRateLimiting("room-read").Produces<PromptPage>();
+        app.MapPost("/api/rooms/{id:guid}/prompts", async (Guid id, PromptCommand command, HttpContext context, RoomStore store, RoomPublisher publisher) =>
+        {
+            var result = await store.EditPromptAsync(id, GuestAuthentication.GuestId(context.User), command);
             await publisher.PublishAsync(id);
             return Results.Ok(result);
         }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();

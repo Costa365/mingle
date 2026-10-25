@@ -1,21 +1,12 @@
 using System.Text.Json;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Prompts;
 
 namespace TeamGames.Core.Games;
 
 public sealed class ThisOrThat(IGameRandom random) : IGameModule
 {
     public string Id => "this-or-that";
-    private sealed record Pair(string A, string B);
-    private static readonly Pair[] Prompts =
-    [
-        new("Mountains", "Seaside"), new("Tea", "Coffee"), new("Early start", "Late start"),
-        new("Board games", "Video games"), new("Cook together", "Eat out together"),
-        new("A good book", "A good film"), new("Train journey", "Road trip"),
-        new("Quiet workspace", "Background music"), new("Plan ahead", "Be spontaneous"),
-        new("City break", "Countryside escape"), new("Learn a language", "Learn an instrument"),
-        new("Sweet snack", "Savoury snack")
-    ];
     private sealed class Answer
     {
         public string Choice { get; set; } = "";
@@ -24,6 +15,12 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
     private sealed record SavedRound(Guid Id, string OptionA, string OptionB, IReadOnlyList<Guid> Roster, IReadOnlyDictionary<Guid, Answer> Answers);
     private sealed class State
     {
+        public int RoundNumber { get; set; }
+        public string Prompt { get; set; } = "Which would you choose?";
+        public List<string> UsedPromptIds { get; set; } = [];
+        public string Category { get; set; } = "";
+        public string Tag { get; set; } = "";
+        public string Search { get; set; } = "";
         public Guid RoundId { get; set; }
         public string OptionA { get; set; } = "";
         public string OptionB { get; set; } = "";
@@ -35,26 +32,53 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         public List<RoundResult> Results { get; set; } = [];
         public List<SavedRound> CompletedRounds { get; set; } = [];
     }
-    public string Start(Room room)
+    public string Start(Room room, GameCommand command)
     {
         var state = new State();
-        Next(state, room);
+        Next(state, room, command);
         return JsonSerializer.Serialize(state);
     }
-    private void Next(State state, Room room)
+    private static Prompt[] Pool(State state, Room room) => room.PromptPool.Where(p => PromptRules.Matches(p, "this-or-that", state.Category, state.Tag, state.Search)).ToArray();
+    private void Next(State state, Room room, GameCommand command)
     {
-        var available = Enumerable.Range(0, Prompts.Length).Except(state.Used).ToArray();
-        if (available.Length == 0) throw new RoomException("prompts_exhausted", "The seed prompts are finished; finish this game", 409);
-        state.Used.Add(available[random.Next(available.Length)]);
-        var pair = Prompts[state.Used[^1]];
-        state.OptionA = pair.A;
-        state.OptionB = pair.B;
+        if ((command.Category?.Length ?? 0) > 48 || (command.Tag?.Length ?? 0) > 32 || (command.Search?.Length ?? 0) > 120)
+            throw new RoomException("invalid_filter", "Shorten the prompt filters");
+        state.Category = command.Category?.Trim() ?? state.Category;
+        state.Tag = command.Tag?.Trim() ?? state.Tag;
+        state.Search = command.Search?.Trim() ?? state.Search;
+        var pool = Pool(state, room);
+        var available = pool.Where(p => !state.UsedPromptIds.Contains(p.Id)).ToArray();
+        if (command.ResetPool)
+        {
+            if (pool.Length == 0 || available.Length != 0) throw new RoomException("reset_unavailable", "Reset is available when the selected pool is exhausted", 409);
+            state.UsedPromptIds.RemoveAll(id => pool.Any(p => p.Id == id));
+            available = pool;
+        }
+        if (available.Length == 0) throw new RoomException("prompts_exhausted", "This prompt pool is exhausted; reset it or change your filters", 409);
+        var prompt = command.PromptId is null ? available[random.Next(available.Length)]
+            : available.FirstOrDefault(p => p.Id == command.PromptId) ?? throw new RoomException("prompt_unavailable", "Choose an unused, enabled prompt from this pool", 409);
+        state.UsedPromptIds.Add(prompt.Id);
+        state.Prompt = prompt.Text;
+        state.OptionA = prompt.OptionA;
+        state.OptionB = prompt.OptionB;
+        state.RoundNumber++;
         state.RoundId = Guid.NewGuid();
         state.Roster = room.Members.Where(m => !m.Removed).Select(m => m.Id).ToList();
         state.Answers = [];
         state.Stage = "responding";
     }
-    private static State Read(string json) => JsonSerializer.Deserialize<State>(json) ?? throw new InvalidOperationException("Missing round state");
+    private static State Read(string json)
+    {
+        var state = JsonSerializer.Deserialize<State>(json) ?? throw new InvalidOperationException("Missing round state");
+        // M2 stored indices into its twelve-pair deck. Their stable seed IDs preserve usage.
+        if (state.Used.Count > 0)
+        {
+            state.UsedPromptIds.AddRange(state.Used.Select(index => $"tot-{index + 1:000}"));
+            if (state.RoundNumber == 0) state.RoundNumber = state.Used.Count;
+            state.Used = [];
+        }
+        return state;
+    }
     private static Guid[] Eligible(State state, Room room) => state.Roster.Where(id => room.Members.Any(m => m.Id == id && !m.Removed)).ToArray();
     private static void Finalize(State state, Room room, bool skipped)
     {
@@ -65,7 +89,7 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         var b = skipped ? 0 : answers.Count(c => c == "b");
         var passes = skipped ? 0 : answers.Count(c => c == "pass");
         var percent = a + b == 0 ? 0 : (int)Math.Round(100.0 * a / (a + b), MidpointRounding.AwayFromZero);
-        state.Results.Add(new(state.RoundId, state.Used.Count, "Which would you choose?", state.OptionA, state.OptionB,
+        state.Results.Add(new(state.RoundId, state.RoundNumber, state.Prompt, state.OptionA, state.OptionB,
             skipped, a, b, passes, eligible.Length - a - b - passes, percent, a + b == 0 ? 0 : 100 - percent,
             skipped ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
                 state.Answers.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray()));
@@ -97,7 +121,8 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
                     Finalize(state, room, true);
                     state.Stage = "revealed";
                     break;
-                case "next" when state.Stage == "revealed": Next(state, room); break;
+                case "next" when state.Stage == "revealed": Next(state, room, command); break;
+                case "reset" when state.Stage == "revealed": Next(state, room, command with { ResetPool = true }); break;
                 case "finish" when state.Stage != "finished":
                     if (state.Stage == "responding") Finalize(state, room, true);
                     state.Stage = "finished";
@@ -119,16 +144,22 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         if (viewer.Id == room.FacilitatorId)
         {
             if (state.Stage == "responding") actions.AddRange(["reveal", "skip"]);
-            if (state.Stage == "revealed" && state.Used.Count < Prompts.Length) actions.Add("next");
+            if (state.Stage == "revealed")
+            {
+                var pool = Pool(state, room);
+                if (pool.Any(p => !state.UsedPromptIds.Contains(p.Id))) actions.Add("next");
+                else if (pool.Length > 0) actions.Add("reset");
+            }
             actions.Add(state.Stage == "finished" ? "lobby" : "finish");
         }
-        return new(session.Id, Id, state.RoundId, state.Used.Count, state.Revision, state.Stage,
-            "Which would you choose?", state.OptionA, state.OptionB, eligible.Length, eligible.Count(state.Answers.ContainsKey),
+        return new(session.Id, Id, state.RoundId, state.RoundNumber, state.Revision, state.Stage,
+            state.Prompt, state.OptionA, state.OptionB, eligible.Length, eligible.Count(state.Answers.ContainsKey),
             eligible.Contains(viewer.Id), own?.Choice, own?.Revision ?? 0, actions,
             state.Results.Select(result => result with
             {
                 Choices = (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
                     ? choice : choice with { Name = "Removed player" }).ToArray()
-            }).ToArray());
+            }).ToArray(), Pool(state, room).Count(p => !state.UsedPromptIds.Contains(p.Id)), Pool(state, room).Length,
+            state.Category, state.Tag, state.Search, viewer.Id == room.FacilitatorId ? state.UsedPromptIds.ToArray() : []);
     }
 }

@@ -44,7 +44,7 @@ directory = pathlib.Path(sys.argv[1])
 def installation(name):
     with sqlite3.connect(directory / name) as db:
         assert db.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
-        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 3
+        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 4
         return db.execute('SELECT Id, InstanceId, CreatedUtc FROM Installations').fetchall()
 before, after = installation('before.db'), installation('after.db')
 assert len(before) == 1 and before == after, 'Persisted installation changed after recreation'

@@ -17,6 +17,68 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("TeamGames.Core.Prompts.Prompt", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionA")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OptionB")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SeedFingerprint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId", "NormalizedKey")
+                        .IsUnique()
+                        .HasFilter("\"RoomId\" IS NULL");
+
+                    b.HasIndex("RoomId", "GameId", "NormalizedKey")
+                        .IsUnique();
+
+                    b.ToTable("Prompts");
+                });
+
             modelBuilder.Entity("TeamGames.Core.Rooms.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -150,6 +212,14 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Guests");
+                });
+
+            modelBuilder.Entity("TeamGames.Core.Prompts.Prompt", b =>
+                {
+                    b.HasOne("TeamGames.Core.Rooms.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("TeamGames.Core.Rooms.Membership", b =>

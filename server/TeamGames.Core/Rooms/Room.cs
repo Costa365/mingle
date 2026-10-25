@@ -1,4 +1,5 @@
 using System.Text;
+using TeamGames.Core.Prompts;
 using TeamGames.Core.Games;
 
 namespace TeamGames.Core.Rooms;
@@ -14,6 +15,7 @@ public sealed class Room
     public Guid FacilitatorId { get; set; }
     public long LastActivityTicks { get; set; }
     public long? ClosedTicks { get; set; }
+    public IReadOnlyList<Prompt> PromptPool { get; set; } = [];
     public List<Membership> Members { get; set; } = [];
 }
 

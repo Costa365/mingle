@@ -5,14 +5,14 @@ using TeamGames.Core.Rooms;
 namespace TeamGames.Core.Games;
 
 public sealed record GameCommand(Guid CommandId, string Action, Guid? SessionId = null, Guid? RoundId = null,
-    long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0);
+    long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0, string? PromptId = null, string? Category = null, string? Tag = null, string? Search = null, bool ResetPool = false);
 public sealed record PlayerChoiceView(Guid ParticipantId, string Name, string Choice);
 public sealed record RoundResult(Guid RoundId, int Number, string Prompt, string OptionA, string OptionB,
     bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB, IReadOnlyList<PlayerChoiceView> Choices);
 public sealed record GameView(Guid SessionId, string GameId, Guid RoundId, int RoundNumber, long StageRevision,
     string Stage, string Prompt, string OptionA, string OptionB, int EligibleCount, int ResponseCount,
     bool Eligible, string? OwnChoice, long ResponseRevision, IReadOnlyList<string> AllowedActions,
-    IReadOnlyList<RoundResult> Results);
+    IReadOnlyList<RoundResult> Results, int RemainingPrompts = 0, int PoolSize = 0, string Category = "", string Tag = "", string Search = "", IReadOnlyList<string>? UsedPromptIds = null);
 public sealed class GameSession
 {
     public Guid Id { get; set; }
@@ -27,7 +27,7 @@ public sealed class GameRandom : IGameRandom { public int Next(int count) => Ran
 public interface IGameModule
 {
     string Id { get; }
-    string Start(Room room);
+    string Start(Room room, GameCommand command);
     string Apply(string state, Room room, Membership actor, GameCommand command);
     GameView Project(GameSession session, Room room, Membership viewer);
 }
@@ -36,7 +36,7 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
 {
     private sealed class SavedGames
     {
-        public int SchemaVersion { get; set; } = 2;
+        public int SchemaVersion { get; set; } = 3;
         public List<GameSession> Sessions { get; set; } = [];
     }
     private readonly IReadOnlyDictionary<string, IGameModule> registered = modules.ToDictionary(m => m.Id, StringComparer.Ordinal);
@@ -58,7 +58,7 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
                 throw new RoomException("stage_changed", "The room changed; review it and try again", 409);
             var module = Get(command.GameId ?? "");
             var saved = room.GameState is null ? new SavedGames() : Read(room.GameState);
-            saved.Sessions.Add(new GameSession { Id = Guid.NewGuid(), GameId = module.Id, State = module.Start(room) });
+            saved.Sessions.Add(new GameSession { Id = Guid.NewGuid(), GameId = module.Id, State = module.Start(room, command) });
             room.GameState = JsonSerializer.Serialize(saved);
             room.Status = "playing";
         }
@@ -82,9 +82,9 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
     private static SavedGames Read(string json)
     {
         var session = JsonSerializer.Deserialize<SavedGames>(json) ?? throw new InvalidOperationException("Missing game state");
-        if (session.SchemaVersion is not (1 or 2)) throw new InvalidOperationException("Unsupported game state version");
-        // Version 1 has aggregate-only results; modules project those with no named choices.
-        session.SchemaVersion = 2;
+        if (session.SchemaVersion is not (1 or 2 or 3)) throw new InvalidOperationException("Unsupported game state version");
+        // Modules migrate legacy aggregate results and twelve-item prompt usage on read.
+        session.SchemaVersion = 3;
         return session;
     }
 }

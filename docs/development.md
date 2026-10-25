@@ -224,10 +224,31 @@ regular/incognito contexts for independent players (incognito windows share a
 session with each other). Choose an option or pass; change it until reveal. After reveal, each player’s name and choice are shown
 alongside vote totals so the team can talk about their answers. The facilitator can reveal, skip, start the next round, or finish without waiting.
 Return to the lobby to start a fresh session. New arrivals watch the current
-round and become eligible at the next one. The 12-pair starter deck is exhausted
-after 12 rounds; finish and start another session to play again.
+round and become eligible at the next one. Facilitators can open **Browse prompts** to search, filter by category/tag,
+select a pair, or draw randomly. Used prompts are excluded until an explicit pool
+reset. **Add room prompt** creates private room content; edit/delete operations
+keep already-started rounds unchanged. Other game libraries can be prepared now;
+their gameplay is M4.
 
 M2 coverage is in `GameRulesTests.cs`, `GameFunctionalTests.cs`,
 `GamePanel.test.tsx`, the game transport cases in `rooms.test.ts`, and
 `web/e2e/game.spec.ts`. The full verification commands also retain all M0/M1
-regressions. `verify-compose.sh` checks all three EF migrations.
+regressions. `verify-compose.sh` checks all four EF migrations.
+
+## M3 prompt development
+
+The embedded launch library is `server/TeamGames.Core/Prompts/library.json`.
+Keep IDs stable; the first twelve This or That IDs map M2's original deck.
+Startup seeds the typed `Prompts` table after EF migrations. A fingerprint guards
+administrator edits and disabling; existing room prompts are never reseeded.
+Conflicting seed updates are skipped rather than overwriting content. The editorial
+review is recorded in `docs/prompt-editorial-review.md`.
+
+Prompt browse and mutations use `/api/rooms/{id}/prompts`. They require the current
+facilitator's guest cookie; mutations require the usual origin, CSRF, UUID and
+room-version checks plus prompt revisions for edit/delete. Only room prompts are
+editable through this API. Mutations share the room writer and receipt transaction.
+
+M3 coverage lives in `PromptRulesTests`, `PromptFunctionalTests`,
+`PromptLibraryPanel.test.tsx`, and `web/e2e/prompts.spec.ts`. Tests also retain all
+M0–M2 regressions. The full local and Compose commands above include these suites.

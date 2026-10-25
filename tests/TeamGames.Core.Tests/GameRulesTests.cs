@@ -12,6 +12,7 @@ public sealed class GameRulesTests
     private readonly Membership player;
     public GameRulesTests()
     {
+        room.PromptPool = TeamGames.Core.Prompts.PromptLibrary.All.Take(12).ToArray();
         host = RoomRules.Join(room, Guid.NewGuid(), "Host", 20);
         player = RoomRules.Join(room, Guid.NewGuid(), "Player", 20);
         room.FacilitatorId = host.Id;
@@ -185,14 +186,14 @@ public sealed class GameRulesTests
         room.GameState = saved.ToJsonString();
         Assert.Empty(Assert.Single(View().Results).Choices);
         Apply("next");
-        Assert.Equal(2, System.Text.Json.Nodes.JsonNode.Parse(room.GameState!)!["SchemaVersion"]!.GetValue<int>());
+        Assert.Equal(3, System.Text.Json.Nodes.JsonNode.Parse(room.GameState!)!["SchemaVersion"]!.GetValue<int>());
         Apply("reveal");
         Assert.Equal(2, View().Results[1].Choices.Count);
     }
     private sealed class OtherModule : IGameModule
     {
         public string Id => "other";
-        public string Start(Room room) => "started";
+        public string Start(Room room, GameCommand command) => "started";
         public string Apply(string state, Room room, Membership actor, GameCommand command) => "finished";
         public GameView Project(GameSession session, Room room, Membership viewer) =>
             new(session.Id, Id, room.Id, 1, 1, session.State, "Prompt", "A", "B", 1, 0, true, null, 0, [], []);
