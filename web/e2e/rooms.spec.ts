@@ -279,3 +279,21 @@ test('Room keeps team and invitations at the top while Game and Prompts have ded
     fullPage: true,
   })
 })
+
+test('game setup separates start and prompt browsing with a responsive gap', async ({ page }) => {
+  await host(page)
+  const actions = page.getByRole('group', { name: 'Game setup' })
+  const start = actions.getByRole('button', { name: 'Start This or That' })
+  const browse = actions.getByRole('button', { name: 'Browse prompts' })
+  const startBox = (await start.boundingBox())!
+  const browseBox = (await browse.boundingBox())!
+  if (Math.abs(startBox.y - browseBox.y) < startBox.height)
+    expect(browseBox.x - startBox.x - startBox.width).toBeGreaterThanOrEqual(16)
+  else expect(browseBox.y - startBox.y - startBox.height).toBeGreaterThanOrEqual(16)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await browse.click()
+  await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeVisible()
+  await page.getByRole('button', { name: 'Game', exact: true }).click()
+  await start.click()
+  await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
+})

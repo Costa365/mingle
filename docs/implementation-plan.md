@@ -370,6 +370,17 @@ polish; a fixed short prompt makes size assertions deterministic while long text
 can grow naturally. The local preview was rebuilt after a stopped-API data/key
 backup. Required hosted CI gates updating protected main.
 
+### Game setup spacing regression — 2026-10-25
+
+Start This or That and Browse prompts now share a semantic, wrapping action group
+with a 16px gap. The standalone browse action keeps its spacing during gameplay.
+The screenshot regression is covered by a GamePanel component test for grouped
+navigation and a real desktop/mobile browser test measuring separation and testing
+both prompt browsing and game start. All 104 frontend tests and four targeted
+browser cases passed, including the existing room layout/keyboard-order cases;
+type checking, lint, formatting, production build and local deployment checks
+passed. The required hosted suite gates protected main.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.

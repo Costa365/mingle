@@ -94,6 +94,11 @@ function ThisOrThatPanel({
       {control('lobby', 'Return to lobby')}
     </div>
   ) : null
+  const browsePrompts = snapshot.youId === snapshot.facilitatorId && onViewChange && (
+    <button className="text-button browse-prompts" onClick={() => onViewChange('prompts')}>
+      Browse prompts
+    </button>
+  )
   return (
     <>
       <section
@@ -128,15 +133,22 @@ function ThisOrThatPanel({
                   200 built-in pairs across eight categories · Play solo or with your team
                 </p>
                 {snapshot.youId === snapshot.facilitatorId ? (
-                  <button
-                    className="button"
-                    disabled={blocked}
-                    onClick={() => {
-                      void act('start')
-                    }}
+                  <div
+                    className="room-buttons game-start-actions"
+                    role="group"
+                    aria-label="Game setup"
                   >
-                    Start This or That
-                  </button>
+                    <button
+                      className="button"
+                      disabled={blocked}
+                      onClick={() => {
+                        void act('start')
+                      }}
+                    >
+                      Start This or That
+                    </button>
+                    {browsePrompts}
+                  </div>
                 ) : (
                   <p>Waiting for your facilitator to start a game</p>
                 )}
@@ -224,14 +236,7 @@ function ThisOrThatPanel({
                 )}
               </>
             )}
-            {snapshot.youId === snapshot.facilitatorId && onViewChange && (
-              <button
-                className="text-button browse-prompts"
-                onClick={() => onViewChange('prompts')}
-              >
-                Browse prompts
-              </button>
-            )}
+            {game && browsePrompts}
           </div>
           {game?.stage === 'responding' && (
             <aside className="response-sidebar" aria-labelledby="responses-heading">

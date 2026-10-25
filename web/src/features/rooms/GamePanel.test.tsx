@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GamePanel } from './GamePanel'
 import { commandGame, RoomError } from '../../api/rooms'
@@ -278,4 +278,23 @@ it('keeps the current reveal and advance controls ahead of collapsed history', (
   ).toBeTruthy()
   const history = screen.getByText('Earlier rounds (1)').closest('details')!
   expect(history).not.toHaveAttribute('open')
+})
+
+it('groups start and prompt browsing as spaced setup actions and preserves navigation', () => {
+  const changeView = vi.fn()
+  render(
+    <GamePanel
+      snapshot={snapshot}
+      disabled={false}
+      accept={accept}
+      refresh={refresh}
+      onViewChange={changeView}
+      view="room"
+    />,
+  )
+  const actions = screen.getByRole('group', { name: 'Game setup' })
+  expect(actions).toHaveClass('room-buttons')
+  expect(within(actions).getByRole('button', { name: 'Start This or That' })).toBeEnabled()
+  fireEvent.click(within(actions).getByRole('button', { name: 'Browse prompts' }))
+  expect(changeView).toHaveBeenCalledWith('prompts')
 })

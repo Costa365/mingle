@@ -1641,3 +1641,7 @@ button:disabled {
 .response-sidebar .room-note {
   overflow-wrap: anywhere;
 }
+
+.game-start-actions .browse-prompts {
+  margin-top: 0;
+}
