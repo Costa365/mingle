@@ -127,3 +127,16 @@ HTTP routing and cache headers, copies the database only while stopped, recreate
 the API, compares the installation record/migrations/key ring, then runs browser
 flows and a real API outage/retry through Nginx on desktop and mobile. Its exit trap
 removes only the temporary test project and data.
+
+## M3 prompt persistence
+
+M3 adds the fourth EF migration and a `Prompts` table. Startup seeds 350 built-in
+entries by stable ID. Fingerprints preserve administrator edits and disabling;
+room-local prompts remain scoped to their room and are deleted with its retained
+data. A seed conflict preserves existing content rather than failing startup.
+
+Game-state JSON advances to schema version 3 on its next mutation; versions 1 and
+2 remain readable. M2's twelve-index prompt usage maps to stable IDs without
+changing saved text or results. Keep the matching pre-upgrade database and key
+backup if rollback to an older image is needed. The local M2-to-M3 upgrade was
+verified against a stopped-volume backup, including SQLite integrity and keys.

@@ -10,8 +10,10 @@ The foundation and M1 room lifecycle are implemented: catalogue, create/join/lob
 guest cookies, facilitator controls, authorized SignalR updates, durable receipts,
 expiry, and recovery. M2 adds a playable This or That game with private answers,
 facilitator pacing, named choices after reveal, finalized results, and durable
-game recovery. Prompt
-management, the other four games, and administration remain planned (M3–M6).
+game recovery. M3 adds 350 built-in prompts, category/tag/search filters,
+manual/random selection, explicit pool reset, facilitator room-local authoring,
+and repeatable seed updates that preserve edits. The other four games, admin UI,
+and deployment hardening remain planned (M4–M6).
 Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
 

@@ -4,14 +4,14 @@
 
 Deliver the application in [product.md](product.md) using the proposed
 [architecture](architecture.md). This plan was initialized on 2026-10-23 from
-[idea.md](../idea.md). **M0 — Buildable foundation**, **M1 — Rooms, identity,
-and recovery foundation**, and **M2 — First complete game: This or That** are
-implemented and verified locally and in hosted CI. Teams can create and join
-rooms, play multiple rounds, manage their gathering, and recover membership and
-private game state after API restart. M2 passed the
-[required GitHub check](https://github.com/Costa365/mingle/actions/runs/40116725312)
-on implementation commit `4bd98cc`, including named choices after reveal.
-M3 is being implemented; M4–M6 remain planned.
+[idea.md](../idea.md). **M0 — Foundation**, **M1 — Rooms and recovery**,
+**M2 — This or That**, and **M3 — Prompt libraries and authoring** are implemented
+and verified locally and in hosted CI. Teams can play This or That with named
+reveals, browse 350 built-in prompts, author room-local content, filter/select/draw
+prompts, and recover identity and saved rounds across API restarts. Only This or
+That is playable; the other libraries prepare M4's games. M3 passed the
+[required hosted check](https://github.com/Costa365/mingle/actions/runs/40178486428)
+on `edb922f`. M4–M6 remain planned; M4 is next.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -210,15 +210,15 @@ M2 decisions:
 
 Depends on M2.
 
-- [ ] Add typed prompt storage, repeatable seed updates, category/tag filtering,
+- [x] Add typed prompt storage, repeatable seed updates, category/tag filtering,
   search, manual selection, and random drawing without repetition.
-- [ ] Let facilitators create/edit/delete room prompts with validation. Snapshot
+- [x] Let facilitators create/edit/delete room prompts with validation. Snapshot
   selected prompt text so later edits do not alter rounds.
-- [ ] Supply at least 200 reviewed This or That pairs across eight categories and
+- [x] Supply at least 200 reviewed This or That pairs across eight categories and
   50 prompts for each of the other three library-driven games.
-- [ ] Add schema, duplicate, option, count, and seed-preservation checks. Record
+- [x] Add schema, duplicate, option, count, and seed-preservation checks. Record
   completion of the manual editorial review.
-- [ ] Add unit and functional tests for each prompt browsing, selection, authoring,
+- [x] Add unit and functional tests for each prompt browsing, selection, authoring,
   validation, and seed-update feature; test the corresponding browser flows.
 
 **Acceptance:** A facilitator can choose a prompt, draw a random prompt, and play a
@@ -227,8 +227,29 @@ Room prompts never leak into another room; seed reruns preserve edited content.
 
 ### M3 implementation and verification — 2026-10-25
 
-Implementation is in progress; M3 items stay unchecked until local and hosted
-unit and functional gates pass.
+All five M3 items are complete. The
+[hosted verification run](https://github.com/Costa365/mingle/actions/runs/40178486428)
+passed for `edb922f`, including the original M0–M2 regressions.
+
+Verification evidence:
+
+- `scripts/verify.sh` passed locked restore, backend/frontend builds, generated
+  contracts, formatting and lint, four verifier tests, 80 backend unit tests,
+  27 real API/hub/storage functional tests, and 93 frontend unit/component tests.
+- `scripts/verify-compose.sh` passed all 46 desktop/mobile browser tests, routing,
+  health, proxy privacy/cache/security checks, WAL mode, all four EF migrations,
+  and installation/key-ring persistence after API recreation. Hosted CI repeated
+  the same checks successfully and retains reports/screenshots in its artifact.
+- New browser flows cover search/category/tag filters, manual/random draws,
+  custom authoring, validation, edit/delete snapshots, explicit exhaustion reset,
+  reload and real API restart, lost acknowledgements, concurrent-tab conflicts,
+  and confirmed saves followed by a failed library reload. Keyboard selection,
+  reduced motion, axe checks and a 360px viewport passed. The mobile authoring
+  screen was visually inspected, including an emptied category after deletion.
+- A stopped-volume backup preceded the real local M2-to-M3 upgrade. Comparisons
+  preserved installation, guest identities, acknowledged game state and key ring;
+  350 built-ins were seeded and SQLite integrity passed. Both preview containers
+  are healthy on port 8080.
 
 | Acceptance | Unit coverage | Functional coverage |
 | --- | --- | --- |
@@ -256,7 +277,8 @@ Decisions:
   hub, and reconnect code do not select prompts by game-specific branches.
   Every round freezes its text/options before acknowledgement.
 - This or That remembers stable used IDs per session. The M2 twelve-item index
-  list migrates to its corresponding stable IDs. Exhaustion reset clears usage
+  list migrates to its corresponding stable IDs. The game-state envelope accepts
+  versions 1/2 and advances to version 3 on the next mutation. Exhaustion reset clears usage
   only for the selected eligible pool, while historical results and round
   numbering remain intact. Changing filters preserves other pools' usage.
 - Seed fingerprints identify untouched rows. Updates preserve administrator edits

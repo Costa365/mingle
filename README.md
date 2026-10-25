@@ -28,14 +28,14 @@ and ownership. Room changes and retry receipts persist in SQLite.
 change your answer before reveal, compare totals and each player’s named choice after reveal, and continue, skip,
 or finish.
 Facilitators can advance with missing or disconnected players. Private answers,
-stages, finalized results, and retry receipts survive API restarts. M3 adds a persistent prompt library and room-local authoring; its verification
-is in progress. The launch content includes 200 This or That pairs across eight
+stages, finalized results, and retry receipts survive API restarts. M3 adds a verified persistent prompt library and room-local authoring. The launch content includes 200 This or That pairs across eight
 categories and 50 prompts each for three future games.
 
 The other four games and administration remain planned. Unit, API/hub functional,
 and desktop/mobile browser tests run in CI. M2 is complete, including named choices after reveal and
 [hosted CI](https://github.com/Costa365/mingle/actions/runs/40116725312). See the
-implementation plan for acceptance and test evidence.
+implementation plan for acceptance and test evidence. M3 is complete with
+[passing CI](https://github.com/Costa365/mingle/actions/runs/40178486428).
 
 ## Run locally with Docker
 
@@ -66,8 +66,7 @@ For frontend/API development without Docker, follow the
 
 ## Next implementation target
 
-Complete M3 verification, then implement **M4 — Remaining games through the
-module interface**. The additional prompt libraries are available for preparation;
+Implement **M4 — Remaining games through the module interface**. The additional prompt libraries are available for preparation;
 only This or That is currently playable. The first release includes
 all five games, prompt management, administrator controls, and deployment docs.
 
