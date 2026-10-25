@@ -137,9 +137,11 @@ test('late arrival waits, then plays next round and survives real API restart', 
     await expect(page.getByText('Reconnecting…', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Reveal answers' })).toBeDisabled()
     await backend.start()
-    await page.getByRole('button', { name: 'Retry connection' }).click()
-    await late.getByRole('button', { name: 'Retry connection' }).click()
-    await expect(late.getByText('Connected', { exact: true })).toBeVisible()
+    // Either browser may reconnect before a manual retry could be clicked.
+    await Promise.all([
+      expect(page.getByText('Connected', { exact: true })).toBeVisible({ timeout: 25_000 }),
+      expect(late.getByText('Connected', { exact: true })).toBeVisible({ timeout: 25_000 }),
+    ])
     expect((await snapshot(late, room.id)).game).toEqual(before)
     await expect(page.getByText('Connected', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Finish game' }).click()

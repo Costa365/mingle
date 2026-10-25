@@ -381,6 +381,11 @@ browser cases passed, including the existing room layout/keyboard-order cases;
 type checking, lint, formatting, production build and local deployment checks
 passed. The required hosted suite gates protected main.
 
+The first hosted run passed both new spacing cases but exposed an existing
+recovery-test race: the late-arrival browser had already reconnected while the
+test waited for its disappearing Retry connection button. The test now awaits
+both connected states and still compares the recovered game with its saved view.
+
 ## M4 — Remaining games through the module interface
 
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.
