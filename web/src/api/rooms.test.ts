@@ -74,6 +74,38 @@ describe('game snapshot boundary', () => {
     allowedActions: ['answer'],
     results: [],
   }
+  it('validates M4 options, private statements and cleared choices after a stage closes', () => {
+    const statements = { statements: ['First', 'Second', 'Third'], lieIndex: 1 }
+    const extended = {
+      ...game,
+      gameId: 'two-truths-and-a-lie',
+      stage: 'collection',
+      options: [],
+      ownSubmission: statements,
+      allowedActions: ['submit', 'answer', 'close-collection'],
+    }
+    expect(
+      parseSnapshot({ ...room, status: 'playing', game: extended }).game?.ownSubmission,
+    ).toEqual(statements)
+    for (const invalid of [
+      { ...extended, ownSubmission: { ...statements, lieIndex: 3 } },
+      { ...extended, ownSubmission: { ...statements, statements: ['Only one'] } },
+      {
+        ...extended,
+        presenter: { participantId: 'bad', name: 'Player', statements: statements.statements },
+      },
+      { ...extended, options: [{ value: '1', label: '' }] },
+      { ...extended, stage: 'finished', ownChoice: '3' },
+    ])
+      expect(() => parseSnapshot({ ...room, status: 'playing', game: invalid })).toThrow()
+    expect(
+      parseSnapshot({
+        ...room,
+        status: 'playing',
+        game: { ...extended, stage: 'finished', ownChoice: null },
+      }).game?.ownChoice,
+    ).toBeNull()
+  })
   it('accepts a private game view and rejects missing or malformed state', () => {
     expect(parseSnapshot({ ...room, status: 'playing', game }).game).toEqual(game)
     for (const invalid of [

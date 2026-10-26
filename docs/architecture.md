@@ -311,3 +311,28 @@ Room/Game/Prompts navigation is presentation state. Only synchronized changes to
 session/round/stage move the workspace and focus; answer revisions, presence and
 same-stage resynchronization do not. Navigation does not discard pending command
 IDs or prompt drafts. Module views still enforce action availability server-side.
+
+### M4 game modules and privacy
+
+`PromptGame` retains the This or That stored shape and legacy prompt-index upgrade,
+with separate configured modules for Would You Rather, Never Have I Ever and Most
+Likely To. The first two expose aggregate-only reveals. Nominations validate frozen
+eligible targets and reject self-votes; result DTOs contain target totals and ties,
+never voter associations. Receipt flags survive target invalidation to prevent
+status changes from identifying the voter. Only their author is asked to choose again.
+
+`TwoTruthsAndALie` stores private statement submissions and an immutable presenter
+queue separately from current guesses. Collection exposes only per-viewer own
+statements/lie plus public receipt flags. The current presenter's statement text is
+projected during guessing; guesses remain author-only until aggregate reveal.
+Only a non-skipped finalized result carries its lie index. Guess choices are cleared
+from projections after voting closes or the presenter leaves, so closed stages
+cannot carry selections without corresponding current options. Private durable
+state is never sent directly over HTTP or SignalR. M4 uses the existing schema-3
+session envelope and SQLite transaction; no EF migration is added.
+
+The transport adds explicit `StatementSubmission`, `GameOption`, `VoteTotal` and
+`PresenterView` records. TypeScript generation and runtime field validation cover
+these records; the room/reconnect layer still uses generic session/round/stage
+keys. A module registration and view-registry entry add a game without branching
+room lifecycle or subscription behavior. See [game-modules.md](game-modules.md).

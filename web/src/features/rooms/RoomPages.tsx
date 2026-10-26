@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { commandRoom, enterRoom, RoomError } from '../../api/rooms'
 import type { EntryRequest, RoomCommand } from '../../api/rooms'
 import { GamePanel } from './GamePanel'
-import { gameName } from './gameNames'
+import { gameName, gameStageLabel } from './gameNames'
 import { useRoom } from '../../realtime/useRoom'
 
 export function RoomEntry({ create }: { create: boolean }) {
@@ -284,11 +284,7 @@ export function RoomLobby() {
           <div className="current-game-strip">
             <span>
               {gameName(snapshot.game.gameId)} · Round {snapshot.game.roundNumber} ·{' '}
-              {snapshot.game.stage === 'responding'
-                ? 'Live'
-                : snapshot.game.stage === 'revealed'
-                  ? 'Revealed'
-                  : 'Finished'}
+              {gameStageLabel(snapshot.game.stage)}
             </span>
             <button className="text-button" onClick={() => selectView('game')}>
               Return to game →

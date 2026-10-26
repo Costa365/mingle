@@ -29,13 +29,17 @@ change your answer before reveal, compare totals and each player’s named choic
 or finish.
 Facilitators can advance with missing or disconnected players. Private answers,
 stages, finalized results, and retry receipts survive API restarts. M3 adds a verified persistent prompt library and room-local authoring. The launch content includes 200 This or That pairs across eight
-categories and 50 prompts each for three future games.
+categories and 50 prompts each for Would You Rather, Never Have I Ever and Most Likely To.
 
-The other four games and administration remain planned. Unit, API/hub functional,
-and desktop/mobile browser tests run in CI. M2 is complete, including named choices after reveal and
-[hosted CI](https://github.com/Costa365/mingle/actions/runs/40116725312). See the
-implementation plan for acceptance and test evidence. M3 is complete with
-[passing CI](https://github.com/Costa365/mingle/actions/runs/40178486428).
+**M4 — All five games** is implemented. The room chooser now starts any game
+without rejoining. Would You Rather and Never Have I Ever reveal aggregate
+answers; Most Likely To supports anonymous nominations and joint winners; Two
+Truths and a Lie supports private statement collection, opt-out, presenter turns,
+guessing and reveal. All preserve stage/answer recovery and facilitator pacing.
+
+Administration and deployment hardening remain planned (M5–M6). Unit, API/hub
+functional and desktop/mobile browser tests gate changes in CI. See the
+[implementation plan](docs/implementation-plan.md) for current verification evidence.
 
 ## Run locally with Docker
 
@@ -61,13 +65,13 @@ For frontend/API development without Docker, follow the
 | [Product requirements](docs/product.md) | Scope, game behavior, UX, and proposed defaults |
 | [Architecture](docs/architecture.md) | Components, realtime recovery, data, and access control |
 | [Implementation plan](docs/implementation-plan.md) | Milestones, dependencies, and acceptance criteria |
+| [Game modules](docs/game-modules.md) | Registering modules, safe projections and required test layers |
 | [Development guide](docs/development.md) | Tooling, verified commands, testing, and workflow |
 | [Operator guide](docs/operations.md) | Local containers, persistent data, health checks, and edge routing |
 
 ## Next implementation target
 
-Implement **M4 — Remaining games through the module interface**. The additional prompt libraries are available for preparation;
-only This or That is currently playable. The first release includes
-all five games, prompt management, administrator controls, and deployment docs.
+Implement **M5 — Administrator operations** after M4 verification closes. The first
+release also includes production deployment hardening and an operator rehearsal.
 
 See the [implementation plan](docs/implementation-plan.md) for the full sequence.

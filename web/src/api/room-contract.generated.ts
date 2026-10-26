@@ -38,6 +38,30 @@ export interface PromptPage {
   prompts: PromptView[]
 }
 
+export interface StatementSubmission {
+  statements: string[]
+  lieIndex: number
+}
+
+export interface GameOption {
+  value: string
+  label: string
+}
+
+export interface VoteTotal {
+  value: string
+  label: string
+  count: number
+  percent: number
+  winner: boolean
+}
+
+export interface PresenterView {
+  participantId: string
+  name: string
+  statements: string[]
+}
+
 export interface PlayerChoiceView {
   participantId: string
   name: string
@@ -64,6 +88,7 @@ export interface GameCommand {
   tag?: string | null
   search?: string | null
   resetPool?: boolean
+  submission?: StatementSubmission | null
 }
 
 export interface RoundResult {
@@ -80,6 +105,9 @@ export interface RoundResult {
   percentA: number
   percentB: number
   choices: PlayerChoiceView[]
+  totals?: VoteTotal[]
+  lieIndex?: number | null
+  presenterName?: string | null
 }
 
 export interface GameView {
@@ -106,6 +134,10 @@ export interface GameView {
   search?: string
   usedPromptIds?: string[]
   responses?: ResponseStatusView[]
+  options?: GameOption[]
+  ownSubmission?: StatementSubmission | null
+  presenter?: PresenterView | null
+  notice?: string | null
 }
 
 export interface ParticipantView {

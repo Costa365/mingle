@@ -49,7 +49,12 @@ export function PromptLibraryPanel({
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
-  const [gameId, setGame] = useState('this-or-that')
+  const [gameId, setGame] = useState(
+    snapshot.game && snapshot.game.gameId !== 'two-truths-and-a-lie'
+      ? snapshot.game.gameId
+      : 'this-or-that',
+  )
+  const [sessionId, setSessionId] = useState(snapshot.game?.sessionId)
   const [category, setCategory] = useState('')
   const [tag, setTag] = useState('')
   const [search, setSearch] = useState('')
@@ -80,6 +85,19 @@ export function PromptLibraryPanel({
       })
     return () => controller.abort()
   }, [open, snapshot.id, snapshot.version, disabled, expanded])
+  if (sessionId !== snapshot.game?.sessionId) {
+    setSessionId(snapshot.game?.sessionId)
+    if (
+      snapshot.game &&
+      snapshot.game.gameId !== 'two-truths-and-a-lie' &&
+      snapshot.game.gameId !== gameId
+    ) {
+      setGame(snapshot.game.gameId)
+      setCategory('')
+      setTag('')
+      setSearch('')
+    }
+  }
   const pool = prompts.filter((p) => p.gameId === gameId)
   const normalized = (text: string) =>
     text.normalize('NFKC').trim().toUpperCase().split(/\s+/u).join(' ')
@@ -93,7 +111,7 @@ export function PromptLibraryPanel({
   )
   const usable = filtered.filter((p) => p.enabled && !p.used)
   const playable =
-    gameId === 'this-or-that' && (!snapshot.game || snapshot.game.stage === 'revealed')
+    !snapshot.game || (snapshot.game.gameId === gameId && snapshot.game.stage === 'revealed')
   const blocked = disabled || busy || pending !== null
   async function save(action: string, target?: PromptView, retry?: PromptCommand) {
     if ((blocked && !retry) || sending.current) return
@@ -209,10 +227,10 @@ export function PromptLibraryPanel({
               unused and enabled
             </p>
           )}
-          {gameId !== 'this-or-that' && (
+          {snapshot.game && snapshot.game.gameId !== gameId && (
             <p className="room-note">
-              You can browse and prepare prompts for this game. Gameplay for this game is coming
-              soon.
+              Finish the current game and return to the lobby before starting a different game. You
+              can still prepare its prompts.
             </p>
           )}
           {snapshot.game?.stage === 'responding' && (
@@ -226,7 +244,7 @@ export function PromptLibraryPanel({
               className="button"
               disabled={blocked || !loaded || !playable || usable.length === 0}
               onClick={() => {
-                void choose({ category, tag, search })
+                void choose({ gameId, category, tag, search })
               }}
             >
               Draw random prompt
@@ -236,7 +254,7 @@ export function PromptLibraryPanel({
                 className="button"
                 disabled={blocked}
                 onClick={() => {
-                  void choose({ category, tag, search, resetPool: true })
+                  void choose({ gameId, category, tag, search, resetPool: true })
                 }}
               >
                 Reset pool and draw
@@ -381,7 +399,7 @@ export function PromptLibraryPanel({
                       className="text-button"
                       disabled={blocked || !playable || p.used || !p.enabled}
                       onClick={() => {
-                        void choose({ promptId: p.id, category, tag, search })
+                        void choose({ gameId, promptId: p.id, category, tag, search })
                       }}
                     >
                       Use this prompt

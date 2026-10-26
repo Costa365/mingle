@@ -9,3 +9,17 @@ const names: Record<string, string> = {
 export function gameName(id: string) {
   return names[id] ?? 'Game'
 }
+
+export function gameStageLabel(stage: string) {
+  return (
+    (
+      {
+        collection: 'Collecting statements',
+        ready: 'Collection closed',
+        responding: 'Live',
+        revealed: 'Revealed',
+        finished: 'Finished',
+      } as Record<string, string>
+    )[stage] ?? stage
+  )
+}

@@ -4,9 +4,14 @@ using TeamGames.Core.Prompts;
 
 namespace TeamGames.Core.Games;
 
-public sealed class ThisOrThat(IGameRandom random) : IGameModule
+public sealed class ThisOrThat(IGameRandom random) : PromptGame(random, "this-or-that", "binary", true);
+public sealed class WouldYouRather(IGameRandom random) : PromptGame(random, "would-you-rather", "binary");
+public sealed class NeverHaveIEver(IGameRandom random) : PromptGame(random, "never-have-i-ever", "experience");
+public sealed class MostLikelyTo(IGameRandom random) : PromptGame(random, "most-likely-to", "nomination");
+
+public class PromptGame(IGameRandom random, string id, string kind, bool namedReveal = false) : IGameModule
 {
-    public string Id => "this-or-that";
+    public string Id => id;
     private sealed class Answer
     {
         public string Choice { get; set; } = "";
@@ -38,7 +43,7 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         Next(state, room, command);
         return JsonSerializer.Serialize(state);
     }
-    private static Prompt[] Pool(State state, Room room) => room.PromptPool.Where(p => PromptRules.Matches(p, "this-or-that", state.Category, state.Tag, state.Search)).ToArray();
+    private Prompt[] Pool(State state, Room room) => room.PromptPool.Where(p => PromptRules.Matches(p, Id, state.Category, state.Tag, state.Search)).ToArray();
     private void Next(State state, Room room, GameCommand command)
     {
         if ((command.Category?.Length ?? 0) > 48 || (command.Tag?.Length ?? 0) > 32 || (command.Search?.Length ?? 0) > 120)
@@ -59,8 +64,8 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
             : available.FirstOrDefault(p => p.Id == command.PromptId) ?? throw new RoomException("prompt_unavailable", "Choose an unused, enabled prompt from this pool", 409);
         state.UsedPromptIds.Add(prompt.Id);
         state.Prompt = prompt.Text;
-        state.OptionA = prompt.OptionA;
-        state.OptionB = prompt.OptionB;
+        state.OptionA = kind == "experience" ? "I have" : kind == "nomination" ? "Nominate a teammate" : prompt.OptionA;
+        state.OptionB = kind == "experience" ? "I haven't" : kind == "nomination" ? "Pass" : prompt.OptionB;
         state.RoundNumber++;
         state.RoundId = Guid.NewGuid();
         state.Roster = room.Members.Where(m => !m.Removed).Select(m => m.Id).ToList();
@@ -80,7 +85,7 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         return state;
     }
     private static Guid[] Eligible(State state, Room room) => state.Roster.Where(id => room.Members.Any(m => m.Id == id && !m.Removed)).ToArray();
-    private static void Finalize(State state, Room room, bool skipped)
+    private void Finalize(State state, Room room, bool skipped)
     {
         state.CompletedRounds.Add(new(state.RoundId, state.OptionA, state.OptionB, state.Roster.ToArray(), new Dictionary<Guid, Answer>(state.Answers)));
         var eligible = Eligible(state, room);
@@ -88,11 +93,21 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         var a = skipped ? 0 : answers.Count(c => c == "a");
         var b = skipped ? 0 : answers.Count(c => c == "b");
         var passes = skipped ? 0 : answers.Count(c => c == "pass");
+        VoteTotal[]? totals = null;
+        var validNominations = 0;
+        if (kind == "nomination" && !skipped)
+        {
+            var counts = eligible.Select(target => (Id: target, Count: eligible.Count(voter => voter != target && state.Answers.GetValueOrDefault(voter)?.Choice == target.ToString()))).ToArray();
+            validNominations = counts.Sum(c => c.Count);
+            var maximum = counts.Length == 0 ? 0 : counts.Max(c => c.Count);
+            totals = counts.Select(c => new VoteTotal(c.Id.ToString(), room.Members.Single(m => m.Id == c.Id).Name, c.Count,
+                validNominations == 0 ? 0 : (int)Math.Round(100.0 * c.Count / validNominations, MidpointRounding.AwayFromZero), maximum > 0 && c.Count == maximum)).ToArray();
+        }
         var percent = a + b == 0 ? 0 : (int)Math.Round(100.0 * a / (a + b), MidpointRounding.AwayFromZero);
         state.Results.Add(new(state.RoundId, state.RoundNumber, state.Prompt, state.OptionA, state.OptionB,
-            skipped, a, b, passes, eligible.Length - a - b - passes, percent, a + b == 0 ? 0 : 100 - percent,
-            skipped ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
-                state.Answers.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray()));
+            skipped, a, b, passes, eligible.Length - (kind == "nomination" ? validNominations : a + b) - passes, percent, a + b == 0 ? 0 : 100 - percent,
+            skipped || !namedReveal ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
+                state.Answers.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray(), totals));
     }
     public string Apply(string json, Room room, Membership actor, GameCommand command)
     {
@@ -104,10 +119,17 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         {
             if (state.Stage != "responding") throw new RoomException("stage_changed", "Answers are closed for this round", 409);
             if (!Eligible(state, room).Contains(actor.Id)) throw new RoomException("not_eligible", "You can play from the next round", 403);
-            if (command.Choice is not ("a" or "b" or "pass")) throw new RoomException("invalid_choice", "Choose either option or pass");
+            if (kind == "nomination")
+            {
+                var eligible = Eligible(state, room);
+                if (eligible.Length < 2) throw new RoomException("insufficient_players", "This round needs at least two players", 409);
+                if (command.Choice != "pass" && (!Guid.TryParse(command.Choice, out var target) || target == actor.Id || !eligible.Contains(target)))
+                    throw new RoomException("invalid_choice", "Nominate another eligible teammate or pass");
+            }
+            else if (command.Choice is not ("a" or "b" or "pass")) throw new RoomException("invalid_choice", "Choose either option or pass");
             var revision = state.Answers.GetValueOrDefault(actor.Id)?.Revision ?? 0;
             if (command.ResponseRevision != revision) throw new RoomException("response_changed", "Your answer changed in another tab; review it and try again", 409);
-            state.Answers[actor.Id] = new() { Choice = command.Choice, Revision = revision + 1 };
+            state.Answers[actor.Id] = new() { Choice = kind == "nomination" && command.Choice != "pass" ? Guid.Parse(command.Choice!).ToString() : command.Choice, Revision = revision + 1 };
         }
         else
         {
@@ -140,7 +162,7 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         var eligible = Eligible(state, room);
         var own = state.Answers.GetValueOrDefault(viewer.Id);
         var actions = new List<string>();
-        if (state.Stage == "responding" && eligible.Contains(viewer.Id)) actions.Add("answer");
+        if (state.Stage == "responding" && eligible.Contains(viewer.Id) && (kind != "nomination" || eligible.Length >= 2)) actions.Add("answer");
         if (viewer.Id == room.FacilitatorId)
         {
             if (state.Stage == "responding") actions.AddRange(["reveal", "skip"]);
@@ -154,13 +176,17 @@ public sealed class ThisOrThat(IGameRandom random) : IGameModule
         }
         return new(session.Id, Id, state.RoundId, state.RoundNumber, state.Revision, state.Stage,
             state.Prompt, state.OptionA, state.OptionB, eligible.Length, eligible.Count(state.Answers.ContainsKey),
-            eligible.Contains(viewer.Id), own?.Choice, own?.Revision ?? 0, actions,
+            eligible.Contains(viewer.Id) && (kind != "nomination" || eligible.Length >= 2),
+            kind == "nomination" && own?.Choice != "pass" && !eligible.Any(id => id != viewer.Id && id.ToString() == own?.Choice) ? null : own?.Choice, own?.Revision ?? 0, actions,
             state.Results.Select(result => result with
             {
                 Choices = (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
-                    ? choice : choice with { Name = "Removed player" }).ToArray()
+                    ? choice : choice with { Name = "Removed player" }).ToArray(),
+                Totals = result.Totals?.Select(total => room.Members.Any(m => !m.Removed && m.Id.ToString() == total.Value) ? total : total with { Label = "Removed player" }).ToArray()
             }).ToArray(), Pool(state, room).Count(p => !state.UsedPromptIds.Contains(p.Id)), Pool(state, room).Length,
             state.Category, state.Tag, state.Search, viewer.Id == room.FacilitatorId ? state.UsedPromptIds.ToArray() : [],
-            eligible.Select(id => new ResponseStatusView(id, state.Answers.ContainsKey(id))).ToArray());
+            eligible.Select(id => new ResponseStatusView(id, state.Answers.ContainsKey(id))).ToArray(),
+            kind == "nomination" ? eligible.Where(id => id != viewer.Id).Select(id => new GameOption(id.ToString(), room.Members.Single(m => m.Id == id).Name)).ToArray() : null,
+            Notice: kind == "nomination" && eligible.Length < 2 ? "This round needs two players. Skip this round or finish the game." : kind == "nomination" && state.Stage == "responding" && own is not null && own.Choice != "pass" && !eligible.Any(id => id != viewer.Id && id.ToString() == own.Choice) ? "Your previous nominee is no longer eligible. Choose another teammate or pass." : null);
     }
 }

@@ -82,7 +82,7 @@ function parseGame(g: Contract.GameView) {
     typeof g.gameId !== 'string' ||
     g.gameId.length < 1 ||
     g.gameId.length > 64 ||
-    !['responding', 'revealed', 'finished'].includes(g.stage) ||
+    !['collection', 'ready', 'responding', 'revealed', 'finished'].includes(g.stage) ||
     !count(g.roundNumber) ||
     g.roundNumber < 1 ||
     !count(g.stageRevision) ||
@@ -100,11 +100,26 @@ function parseGame(g: Contract.GameView) {
         new Set(g.responses.map((r) => r.participantId)).size !== g.responses.length ||
         g.responses.filter((r) => r.hasResponded).length !== g.responseCount)) ||
     typeof g.eligible !== 'boolean' ||
-    ![null, 'a', 'b', 'pass'].includes(g.ownChoice) ||
+    !(
+      g.ownChoice === null ||
+      ['a', 'b', 'pass'].includes(g.ownChoice) ||
+      (Array.isArray(g.options) && g.options.some((o) => o && o.value === g.ownChoice))
+    ) ||
     ![g.prompt, g.optionA, g.optionB].every((s) => typeof s === 'string' && s.length > 0) ||
     !Array.isArray(g.allowedActions) ||
     !g.allowedActions.every((a) =>
-      ['answer', 'reveal', 'skip', 'next', 'finish', 'lobby', 'reset'].includes(a),
+      [
+        'answer',
+        'submit',
+        'close-collection',
+        'reopen',
+        'reveal',
+        'skip',
+        'next',
+        'finish',
+        'lobby',
+        'reset',
+      ].includes(a),
     ) ||
     !Array.isArray(g.results) ||
     !g.results.every(
@@ -127,6 +142,56 @@ function parseGame(g: Contract.GameView) {
                 c.name.length > 0 &&
                 c.name.length <= 32 &&
                 ['a', 'b', 'pass', 'missing'].includes(c.choice),
+            ))),
+    )
+  )
+    throw new RoomError('invalid_response', 'The game response could not be read')
+  const validStatements = (value: unknown): value is string[] =>
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value.every((s) => typeof s === 'string' && s.length > 0 && s.length <= 200)
+  if (
+    (g.options != null &&
+      (!Array.isArray(g.options) ||
+        g.options.some(
+          (o) =>
+            !o ||
+            typeof o.value !== 'string' ||
+            o.value.length < 1 ||
+            o.value.length > 64 ||
+            typeof o.label !== 'string' ||
+            !o.label ||
+            o.label.length > 200,
+        ) ||
+        new Set(g.options.map((o) => o.value)).size !== g.options.length)) ||
+    (g.ownSubmission != null &&
+      (!validStatements(g.ownSubmission.statements) ||
+        ![0, 1, 2].includes(g.ownSubmission.lieIndex))) ||
+    (g.presenter != null &&
+      (!uuid.test(g.presenter.participantId) ||
+        typeof g.presenter.name !== 'string' ||
+        !g.presenter.name ||
+        g.presenter.name.length > 32 ||
+        !validStatements(g.presenter.statements))) ||
+    (g.notice != null && (typeof g.notice !== 'string' || g.notice.length > 500)) ||
+    g.results.some(
+      (r) =>
+        (r.lieIndex != null && (r.skipped || ![0, 1, 2].includes(r.lieIndex))) ||
+        (r.presenterName != null &&
+          (typeof r.presenterName !== 'string' ||
+            !r.presenterName ||
+            r.presenterName.length > 32)) ||
+        (r.totals != null &&
+          (!Array.isArray(r.totals) ||
+            r.totals.some(
+              (t) =>
+                !t ||
+                typeof t.value !== 'string' ||
+                typeof t.label !== 'string' ||
+                !count(t.count) ||
+                !count(t.percent) ||
+                t.percent > 100 ||
+                typeof t.winner !== 'boolean',
             ))),
     )
   )

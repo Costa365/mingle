@@ -259,6 +259,8 @@ test('Room keeps team and invitations at the top while Game and Prompts have ded
     await expect(page.getByRole('button', { name: 'Copy invite link' })).toBeInViewport()
   await page.getByRole('button', { name: 'Lock joining', exact: true }).focus()
   await page.keyboard.press('Tab')
+  await expect(page.getByLabel('Choose a game')).toBeFocused()
+  await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Start This or That' })).toBeFocused()
   await page.getByRole('button', { name: 'Browse prompts' }).click()
   await expect(page.getByText('200 prompts · 200 unused and enabled')).toBeVisible()

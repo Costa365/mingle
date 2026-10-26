@@ -26,6 +26,10 @@ public static class RoomEndpoints
         });
         builder.Services.AddSingleton<IGameRandom, GameRandom>();
         builder.Services.AddSingleton<IGameModule, ThisOrThat>();
+        builder.Services.AddSingleton<IGameModule, WouldYouRather>();
+        builder.Services.AddSingleton<IGameModule, NeverHaveIEver>();
+        builder.Services.AddSingleton<IGameModule, MostLikelyTo>();
+        builder.Services.AddSingleton<IGameModule, TwoTruthsAndALie>();
         builder.Services.AddSingleton<GameModules>();
         builder.Services.AddSingleton<RoomWriter>();
         builder.Services.AddSingleton<PresenceRegistry>();

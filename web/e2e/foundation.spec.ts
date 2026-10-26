@@ -65,12 +65,7 @@ for (const [id, name] of games) {
     await expect(page.getByRole('heading', { name, level: 1, exact: true })).toBeVisible()
     await expect(page).toHaveTitle(`${name} — Mingle`)
     await expectHeadingsWithoutFullStops(page)
-    await expect(
-      page.getByText(
-        id === 'this-or-that' ? 'Ready to play in your room' : 'Gameplay is coming soon',
-        { exact: true },
-      ),
-    ).toBeVisible()
+    await expect(page.getByText('Ready to play in your room', { exact: true })).toBeVisible()
     await page.reload()
     await expect(page.getByRole('heading', { name, level: 1, exact: true })).toBeVisible()
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])

@@ -8,10 +8,11 @@ Deliver the application in [product.md](product.md) using the proposed
 **M2 — This or That**, and **M3 — Prompt libraries and authoring** are implemented
 and verified locally and in hosted CI. Teams can play This or That with named
 reveals, browse 350 built-in prompts, author room-local content, filter/select/draw
-prompts, and recover identity and saved rounds across API restarts. Only This or
-That is playable; the other libraries prepare M4's games. M3 passed the
+prompts, and recover identity and saved rounds across API restarts. M4 now adds
+the remaining four playable games, verified locally with 300 automated tests;
+its required hosted check gates the update to protected main. M3 passed the
 [required hosted check](https://github.com/Costa365/mingle/actions/runs/40178486428)
-on `edb922f`. M4–M6 remain planned; M4 is next.
+on `edb922f`. M5–M6 remain planned; M5 is next.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -388,17 +389,55 @@ both connected states and still compares the recovered game with its saved view.
 
 ## M4 — Remaining games through the module interface
 
+Implemented and locally verified on 2026-10-26 on `feat/m4-games`. The
+[M4 implementation design](m4-implementation.md) records decisions and the
+unit/API/browser acceptance matrix. The user approved the
+[interactive draft](https://p.superdesign.dev/draft/3f088dfc-d0b5-4efd-8045-28dcb74df171)
+and requested automatic design approval unless review is explicitly requested;
+that standing instruction is recorded in AGENTS.md. See
+[module development](game-modules.md) for extension guidance.
+
 Depends on M2 and M3. Implement in this order to increase rule complexity gradually.
 
-- [ ] Would You Rather?: reuse binary mechanics, add its content and presentation.
-- [ ] Never Have I Ever: add response labels, aggregate reveal, and pass handling.
-- [ ] Most Likely To: add nomination eligibility, no self-voting, removed-player
+- [x] Would You Rather?: reuse binary mechanics, add its content and presentation.
+- [x] Never Have I Ever: add response labels, aggregate reveal, and pass handling.
+- [x] Most Likely To: add nomination eligibility, no self-voting, removed-player
   behavior, ties, and insufficient-player handling.
-- [ ] Two Truths and a Lie: add private statement collection, lie validation,
+- [x] Two Truths and a Lie: add private statement collection, lie validation,
   presenter sequencing, guessing, reveal, and incomplete/skipped submissions.
-- [ ] Add unit and functional tests for each game's actions, rules, projections,
+- [x] Add unit and functional tests for each game's actions, rules, projections,
   and UI states, including a complete browser flow for each game. Document how
   to add a module, its client view, and both test layers.
+
+**Implementation:** `PromptGame` retains the This or That state format and supplies
+Would You Rather, Never Have I Ever and anonymous nominations through registered
+module instances. `TwoTruthsAndALie` owns collection, opt-out, the frozen presenter
+queue, guessing and reveal. No game-specific branches were added to room storage
+or reconnect handling. See [game-modules.md](game-modules.md) for extension guidance.
+
+**Coverage:** `M4GameRulesTests` covers inputs, privacy, eligibility, ties, missing
+answers, no-ready reopening, removals and stale stages. `M4GameFunctionalTests`
+exercises real HTTP/hub projections, replay, permissions and SQLite restarts at
+collection/guess/reveal, plus nomination and presenter removal. `GamePanel`,
+`StatementForm` and transport unit tests cover chooser controls, draft conflicts,
+private forms and DTO validation. `m4.spec.ts` plays all five games in one room
+on desktop/mobile, checks anonymous/aggregate reveals, opt-out, cross-tab conflicts,
+keyboard guesses, collection accessibility and actual API restarts. Existing room
+keyboard checks include the new game chooser before Start.
+
+Local verification: 79 Core tests, 44 API unit/functional tests and 115
+frontend unit/component tests pass. The first standard container build was blocked
+by NuGet DNS/download timeouts. Local container verification uses a temporary
+build-only override with 42 cached official packages: NuGet content hashes match
+the committed lockfiles and archive checksums match the cache. No dependency,
+checked-in Dockerfile or runtime deployment configuration was changed. All 58
+Docker/Nginx desktop/mobile browser cases passed, including keyboard
+navigation, collection/reveal accessibility, cross-tab draft conflicts and three
+stage restarts. The four deployment-verifier unit tests, generated-contract check,
+backend/frontend formatting, TypeScript checking, lint, production builds and
+proxy/persistence checks passed too (300 automated tests total). The local preview
+was updated after a stopped-API database/key backup. Hosted CI uses the standard
+build and must pass before this exact commit can update protected main.
 
 **Acceptance:** All five games work in one room without rejoining between games.
 Each supports facilitator advance and reconnection at every input/reveal stage.

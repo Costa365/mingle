@@ -6,7 +6,7 @@ using TeamGames.Core.Prompts;
 using TeamGames.Core.Games;
 
 // Generate from the actual public DTOs, never from EF entities or credentials.
-Type[] types = [typeof(PromptInput), typeof(PromptCommand), typeof(PromptView), typeof(PromptPage), typeof(PlayerChoiceView), typeof(ResponseStatusView), typeof(GameCommand), typeof(RoundResult), typeof(GameView), typeof(ParticipantView), typeof(RoomSnapshot), typeof(EntryRequest), typeof(RoomCommand), typeof(CommandResult), typeof(SessionView), typeof(RoomErrorView)];
+Type[] types = [typeof(PromptInput), typeof(PromptCommand), typeof(PromptView), typeof(PromptPage), typeof(StatementSubmission), typeof(GameOption), typeof(VoteTotal), typeof(PresenterView), typeof(PlayerChoiceView), typeof(ResponseStatusView), typeof(GameCommand), typeof(RoundResult), typeof(GameView), typeof(ParticipantView), typeof(RoomSnapshot), typeof(EntryRequest), typeof(RoomCommand), typeof(CommandResult), typeof(SessionView), typeof(RoomErrorView)];
 var nullable = new NullabilityInfoContext();
 var output = new StringBuilder("// Generated from TeamGames.Core room DTOs. Run the contracts tool to update.\n\n");
 foreach (var type in types)

@@ -1645,3 +1645,96 @@ button:disabled {
 .game-start-actions .browse-prompts {
   margin-top: 0;
 }
+
+.game-selector {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-block: 20px;
+}
+.game-selector select {
+  display: block;
+  padding: 12px;
+  width: min(100%, 400px);
+  min-height: 44px;
+  font: inherit;
+  color: var(--ink);
+  background: #fffdf7;
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  margin-top: 8px;
+}
+.statement-form fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+}
+.statement-form legend {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.statement-entry {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.statement-entry > label:first-child {
+  font-weight: 600;
+  font-size: 14px;
+}
+.statement-entry textarea {
+  resize: vertical;
+  min-height: 72px;
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  color: var(--ink);
+  background: #fffdf7;
+  border: 1px solid #a6b39c;
+  border-radius: 7px;
+}
+.lie-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 13px;
+}
+.lie-label input {
+  accent-color: var(--green);
+}
+.vote-total {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf7;
+  margin-block: 12px;
+  overflow-wrap: anywhere;
+}
+.vote-total.is-lie {
+  border: 2px solid var(--green);
+  background: #e4edc9;
+}
+.presenter-name,
+.result-winners {
+  font-weight: 700;
+  color: var(--green);
+}
+.statement-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+.statement-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e4edc9;
+  color: var(--green);
+  font-size: 14px;
+}

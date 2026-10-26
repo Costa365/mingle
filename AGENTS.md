@@ -12,8 +12,9 @@ expiry, and recovery. M2 adds a playable This or That game with private answers,
 facilitator pacing, named choices after reveal, finalized results, and durable
 game recovery. M3 adds 350 built-in prompts, category/tag/search filters,
 manual/random selection, explicit pool reset, facilitator room-local authoring,
-and repeatable seed updates that preserve edits. The other four games, admin UI,
-and deployment hardening remain planned (M4–M6).
+and repeatable seed updates that preserve edits. M4 implements all five games,
+including anonymous nominations and private statement collection/presenter turns.
+Administrator UI and deployment hardening remain planned (M5–M6).
 Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
 
@@ -51,6 +52,10 @@ record refinements in the product document. User instructions override this plan
 
 ## How to work
 
+- Design drafts are automatically approved for this repository unless the user
+  explicitly requests a design review. Proceed from design to implementation
+  without a separate approval pause, including when a skill normally requires
+  draft approval. This user instruction overrides that skill workflow.
 - Implement a small, usable slice with its unit tests, functional tests, and
   documentation in the same change. For multi-step work, update the implementation
   plan with progress and decisions.

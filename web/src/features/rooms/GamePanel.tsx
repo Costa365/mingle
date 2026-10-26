@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { gameName, gameStageLabel } from './gameNames'
+import { StatementForm } from './StatementForm'
 import { PromptLibraryPanel } from './PromptLibraryPanel'
 import { commandGame, RoomError } from '../../api/rooms'
 import type { GameCommand, GameView, RoomSnapshot } from '../../api/rooms'
@@ -11,7 +13,15 @@ interface GamePanelProps {
   accept: (snapshot: RoomSnapshot) => void
   refresh: () => Promise<unknown>
 }
-const views: Record<string, typeof ThisOrThatPanel> = { 'this-or-that': ThisOrThatPanel }
+const views: Record<string, typeof GameSessionPanel> = Object.fromEntries(
+  [
+    'this-or-that',
+    'would-you-rather',
+    'never-have-i-ever',
+    'most-likely-to',
+    'two-truths-and-a-lie',
+  ].map((id) => [id, GameSessionPanel]),
+)
 export function GamePanel(props: GamePanelProps) {
   const View = views[props.snapshot.game?.gameId ?? 'this-or-that']
   return View ? (
@@ -20,7 +30,7 @@ export function GamePanel(props: GamePanelProps) {
     <p>This game needs a newer version of Mingle. Refresh to continue.</p>
   )
 }
-function ThisOrThatPanel({
+function GameSessionPanel({
   snapshot,
   disabled,
   accept,
@@ -33,6 +43,10 @@ function ThisOrThatPanel({
   const [pending, setPending] = useState<GameCommand | null>(null)
   const sending = useRef(false)
   const game = snapshot.game
+  const [selectedGame, setSelectedGame] = useState('this-or-that')
+  const gameId = game?.gameId ?? selectedGame
+  const title = gameName(gameId)
+  const collecting = game?.stage === 'collection'
   const Heading = game || view === 'game' ? 'h1' : 'h2'
   async function act(
     action: string,
@@ -48,7 +62,7 @@ function ThisOrThatPanel({
       commandId: crypto.randomUUID(),
       action,
       choice,
-      gameId: 'this-or-that',
+      gameId,
       expectedVersion: snapshot.version,
       sessionId: game?.sessionId,
       roundId: game?.roundId,
@@ -58,8 +72,10 @@ function ThisOrThatPanel({
     }
     setPending(command)
     try {
-      accept((await commandGame(snapshot.id, command)).snapshot)
+      const result = await commandGame(snapshot.id, command)
+      accept(result.snapshot)
       setPending(null)
+      return result.snapshot
     } catch (cause) {
       if (cause instanceof RoomError && cause.status >= 400 && cause.status < 500) {
         setPending(null)
@@ -84,7 +100,11 @@ function ThisOrThatPanel({
         {label}
       </button>
     )
-  const controls = game?.allowedActions.some((action) => action !== 'answer') ? (
+  const controls = game?.allowedActions.some((action) =>
+    ['reveal', 'skip', 'next', 'reset', 'finish', 'lobby', 'close-collection', 'reopen'].includes(
+      action,
+    ),
+  ) ? (
     <div className="room-buttons game-controls" role="group" aria-label="Facilitator controls">
       {control('reveal', 'Reveal answers')}
       {control('skip', 'Skip round')}
@@ -92,13 +112,17 @@ function ThisOrThatPanel({
       {control('reset', 'Reset pool and draw')}
       {control('finish', 'Finish game')}
       {control('lobby', 'Return to lobby')}
+      {control('close-collection', 'Close collection')}
+      {control('reopen', 'Reopen collection')}
     </div>
   ) : null
-  const browsePrompts = snapshot.youId === snapshot.facilitatorId && onViewChange && (
-    <button className="text-button browse-prompts" onClick={() => onViewChange('prompts')}>
-      Browse prompts
-    </button>
-  )
+  const browsePrompts = snapshot.youId === snapshot.facilitatorId &&
+    onViewChange &&
+    gameId !== 'two-truths-and-a-lie' && (
+      <button className="text-button browse-prompts" onClick={() => onViewChange('prompts')}>
+        Browse prompts
+      </button>
+    )
   return (
     <>
       <section
@@ -110,27 +134,54 @@ function ThisOrThatPanel({
           <p className="game-notice" role="status">
             {game.stage === 'responding'
               ? game.roundNumber === 1
-                ? 'This or That has started'
+                ? `${title} has started`
                 : `Round ${game.roundNumber} has started`
-              : game.stage === 'revealed'
-                ? 'Answers revealed · Time to talk'
-                : 'Game finished'}
+              : game.stage === 'collection'
+                ? 'Private statement collection'
+                : game.stage === 'ready'
+                  ? 'Collection closed'
+                  : game.stage === 'revealed'
+                    ? 'Answers revealed · Time to talk'
+                    : 'Game finished'}
           </p>
         )}
         {!game && <p className="eyebrow">A LITTLE PLAY, TOGETHER</p>}
         <Heading id="game-heading" tabIndex={-1}>
-          This or That
+          {title}
         </Heading>
-        <div className={game?.stage === 'responding' ? 'focused-game-layout' : ''}>
+        <div className={game?.stage === 'responding' || collecting ? 'focused-game-layout' : ''}>
           <div className="game-main">
             {!game ? (
               <>
+                {snapshot.youId === snapshot.facilitatorId && (
+                  <label className="game-selector">
+                    Choose a game
+                    <select value={selectedGame} onChange={(e) => setSelectedGame(e.target.value)}>
+                      {Object.keys(views).map((id) => (
+                        <option key={id} value={id}>
+                          {gameName(id)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <p>
-                  Pick a side, discover what you share, and talk about the differences. Passing is
-                  always welcome.
+                  {gameId === 'two-truths-and-a-lie'
+                    ? 'Write two true statements and one lie, then take turns guessing together.'
+                    : gameId === 'most-likely-to'
+                      ? 'Nominate another teammate and discover the group’s picks. Votes stay anonymous.'
+                      : gameId === 'never-have-i-ever'
+                        ? 'Find the little adventures you share. Choose I have or I haven’t.'
+                        : 'Pick a side, discover what you share, and talk about the differences. Passing is always welcome.'}
                 </p>
                 <p className="room-note">
-                  200 built-in pairs across eight categories · Play solo or with your team
+                  {gameId === 'this-or-that'
+                    ? '200 built-in pairs across eight categories · Play solo or with your team'
+                    : gameId === 'two-truths-and-a-lie'
+                      ? 'At least two players for guessing · Your lie stays private until reveal'
+                      : gameId === 'most-likely-to'
+                        ? '50 built-in prompts · At least two players for nominations'
+                        : '50 built-in prompts · Play solo or with your team'}
                 </p>
                 {snapshot.youId === snapshot.facilitatorId ? (
                   <div
@@ -145,7 +196,7 @@ function ThisOrThatPanel({
                         void act('start')
                       }}
                     >
-                      Start This or That
+                      Start {title}
                     </button>
                     {browsePrompts}
                   </div>
@@ -161,34 +212,69 @@ function ThisOrThatPanel({
                     ? 'Make your choice'
                     : game.stage === 'revealed'
                       ? 'Time to compare'
-                      : 'All wrapped up'}
+                      : collecting
+                        ? 'Write your statements'
+                        : game.stage === 'ready'
+                          ? 'Collection closed'
+                          : 'All wrapped up'}
                 </p>
                 {game.stage !== 'responding' && controls}
+                {game.notice && (
+                  <p role="status" className="room-note">
+                    {game.notice}
+                  </p>
+                )}
+                {collecting && (
+                  <StatementForm
+                    key={`${game.sessionId}:${game.roundId}`}
+                    game={game}
+                    disabled={blocked}
+                    submit={async (submission, responseRevision) =>
+                      (await act('submit', undefined, undefined, { submission, responseRevision }))
+                        ?.game?.responseRevision
+                    }
+                    pass={async (responseRevision) =>
+                      (await act('answer', 'pass', undefined, { responseRevision }))?.game
+                        ?.responseRevision
+                    }
+                  />
+                )}
                 {game.stage === 'responding' && (
                   <>
                     <h2 className="game-prompt">{game.prompt}</h2>
-                    {!game.eligible && (
+                    {game.presenter && (
+                      <p className="presenter-name">Presenter: {game.presenter.name}</p>
+                    )}
+                    {!game.eligible && !game.notice && (
                       <p className="room-note">
-                        You joined during this round. You can play from the next round.
+                        {game.presenter?.participantId === snapshot.youId
+                          ? 'This is your turn. Your teammates are guessing, so you cannot vote.'
+                          : (game.notice ??
+                            'You joined during this round. You can play from the next round.')}
                       </p>
                     )}
                     <div className="game-choices" role="group" aria-label="Your choice">
                       {(
-                        [
-                          ['a', game.optionA],
-                          ['b', game.optionB],
-                        ] as const
-                      ).map(([choice, label]) => (
+                        game.options ?? [
+                          { value: 'a', label: game.optionA },
+                          { value: 'b', label: game.optionB },
+                        ]
+                      ).map(({ value: choice, label }) => (
                         <button
                           key={choice}
-                          className={`choice-button ${game.ownChoice === choice ? 'is-selected' : ''}`}
+                          className={`choice-button ${game.presenter ? 'statement-choice' : ''} ${game.ownChoice === choice ? 'is-selected' : ''}`}
                           aria-pressed={game.ownChoice === choice}
                           disabled={blocked || !game.allowedActions.includes('answer')}
                           onClick={() => {
                             void act('answer', choice)
                           }}
                         >
-                          {label}
+                          {game.presenter && (
+                            <span className="statement-number" aria-hidden="true">
+                              {choice}
+                            </span>
+                          )}
+                          <span>{label}</span>
                           {game.ownChoice === choice && <span aria-hidden="true"> ✓</span>}
                         </button>
                       ))}
@@ -214,8 +300,9 @@ function ThisOrThatPanel({
                   </>
                 )}
                 {game.stage === 'finished' && <h2>Thanks for playing</h2>}
-                {game.stage !== 'responding' && (
+                {['revealed', 'finished'].includes(game.stage) && (
                   <RoundResults
+                    named={gameId === 'this-or-that'}
                     results={game.stage === 'revealed' ? game.results.slice(-1) : game.results}
                   />
                 )}
@@ -231,14 +318,17 @@ function ThisOrThatPanel({
                 {game.stage === 'revealed' && game.results.length > 1 && (
                   <details className="earlier-rounds">
                     <summary>Earlier rounds ({game.results.length - 1})</summary>
-                    <RoundResults results={game.results.slice(0, -1)} />
+                    <RoundResults
+                      named={gameId === 'this-or-that'}
+                      results={game.results.slice(0, -1)}
+                    />
                   </details>
                 )}
               </>
             )}
             {game && browsePrompts}
           </div>
-          {game?.stage === 'responding' && (
+          {(game?.stage === 'responding' || collecting) && game && (
             <aside className="response-sidebar" aria-labelledby="responses-heading">
               <h2 id="responses-heading">Who has responded</h2>
               <p role="status">
@@ -260,7 +350,11 @@ function ThisOrThatPanel({
                       <span
                         className={`response-status ${response.hasResponded ? 'has-responded' : ''}`}
                       >
-                        {response.hasResponded ? 'Answered' : 'Waiting'}
+                        {response.hasResponded
+                          ? collecting
+                            ? 'Responded'
+                            : 'Answered'
+                          : 'Waiting'}
                       </span>
                     </li>
                   )
@@ -268,27 +362,39 @@ function ThisOrThatPanel({
               </ul>
               {game.responses &&
                 snapshot.participants.some(
-                  (p) => !game.responses!.some((r) => r.participantId === p.id),
+                  (p) =>
+                    p.id !== game.presenter?.participantId &&
+                    !game.responses!.some((r) => r.participantId === p.id),
                 ) && (
                   <p className="room-note">
                     Joining next round:{' '}
                     {snapshot.participants
-                      .filter((p) => !game.responses!.some((r) => r.participantId === p.id))
+                      .filter(
+                        (p) =>
+                          p.id !== game.presenter?.participantId &&
+                          !game.responses!.some((r) => r.participantId === p.id),
+                      )
                       .map((p) => p.name)
                       .join(', ')}
                   </p>
                 )}
-              <p className="room-note">Choices stay private until reveal.</p>
+              <p className="room-note">
+                {collecting
+                  ? 'Statements stay private until each person’s turn.'
+                  : 'Choices stay private until reveal.'}
+              </p>
             </aside>
           )}
         </div>
-        {game?.stage === 'revealed' && game.remainingPrompts === 0 && (
-          <p className="room-note">
-            {game.poolSize === 0
-              ? 'No enabled prompts match this pool. Browse another category or add a prompt.'
-              : 'The selected prompt pool is exhausted. Reset it or browse another category.'}
-          </p>
-        )}
+        {gameId !== 'two-truths-and-a-lie' &&
+          game?.stage === 'revealed' &&
+          game.remainingPrompts === 0 && (
+            <p className="room-note">
+              {game.poolSize === 0
+                ? 'No enabled prompts match this pool. Browse another category or add a prompt.'
+                : 'The selected prompt pool is exhausted. Reset it or browse another category.'}
+            </p>
+          )}
         {error && (
           <p className="room-error" role="alert">
             {error}
@@ -311,12 +417,7 @@ function ThisOrThatPanel({
           {game && onViewChange && (
             <div className="current-game-strip">
               <span>
-                This or That · Round {game.roundNumber} ·{' '}
-                {game.stage === 'responding'
-                  ? 'Live'
-                  : game.stage === 'revealed'
-                    ? 'Revealed'
-                    : 'Finished'}
+                {title} · Round {game.roundNumber} · {gameStageLabel(game.stage)}
               </span>
               <button className="text-button" onClick={() => onViewChange('game')}>
                 Return to game →
@@ -329,7 +430,9 @@ function ThisOrThatPanel({
             accept={accept}
             refresh={refresh}
             expanded={view === 'prompts'}
-            choose={(selection) => act(game ? 'next' : 'start', undefined, undefined, selection)}
+            choose={async (selection) => {
+              await act(game ? 'next' : 'start', undefined, undefined, selection)
+            }}
           />
           {view === 'prompts' && error && (
             <p className="room-error" role="alert">
@@ -353,7 +456,13 @@ function ThisOrThatPanel({
   )
 }
 
-function RoundResults({ results }: { results: GameView['results'] }) {
+function RoundResults({
+  results,
+  named = true,
+}: {
+  results: GameView['results']
+  named?: boolean
+}) {
   return (
     <div className="game-results" aria-label="Round results">
       {results.map((result) => (
@@ -363,9 +472,44 @@ function RoundResults({ results }: { results: GameView['results'] }) {
             {result.skipped ? ' · Skipped' : ''}
           </h2>
           <p>
-            {result.optionA} / {result.optionB}
+            {result.presenterName
+              ? `Presenter: ${result.presenterName}`
+              : result.optionA === 'Nominate a teammate'
+                ? result.prompt
+                : `${result.optionA} / ${result.optionB}`}
           </p>
-          {!result.skipped && (
+          {!result.skipped && result.totals && (
+            <>
+              {result.totals.some((t) => t.winner) && (
+                <p className="result-winners">
+                  {result.totals
+                    .filter((t) => t.winner)
+                    .map((t) => t.label)
+                    .join(' and ')}{' '}
+                  {result.totals.filter((t) => t.winner).length > 1
+                    ? 'share the lead'
+                    : 'leads the nominations'}
+                </p>
+              )}
+              {result.totals.map((total, index) => (
+                <div
+                  className={`vote-total ${result.lieIndex === index ? 'is-lie' : ''}`}
+                  key={total.value}
+                >
+                  <strong>{total.label}</strong>
+                  {result.lieIndex === index && <span> · This was the lie</span>}
+                  <p>
+                    {total.count} {result.presenterName ? 'guesses' : 'nominations'} (
+                    {total.percent}%)
+                  </p>
+                </div>
+              ))}
+              <p>
+                {result.passes} passed · {result.missing} unanswered
+              </p>
+            </>
+          )}
+          {!result.skipped && !result.totals && (
             <>
               <p>
                 {result.optionA}: {result.a} {result.a === 1 ? 'vote' : 'votes'} ({result.percentA}
@@ -398,7 +542,7 @@ function RoundResults({ results }: { results: GameView['results'] }) {
                     </li>
                   ))}
                 </ul>
-              ) : (
+              ) : !named ? null : (
                 <p className="room-note">
                   Individual choices are unavailable for this earlier round
                 </p>

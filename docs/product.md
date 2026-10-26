@@ -70,6 +70,21 @@ punctuation. This presentation preference applies to future screens too.
 | Most Likely To | Show a prompt; each player nominates one other eligible participant or passes | Show nomination counts and joint winners on a tie; voters remain unattributed |
 | Two Truths and a Lie | Collect three statements and a private lie selection from each player; facilitator closes collection, then each ready presenter gets a voting round | Other players guess a statement or pass; reveal the lie and guess totals, then proceed to the next presenter |
 
+For Most Likely To, response progress indicates receipt, not a still-valid vote.
+If a nominee is removed, exclude that vote from totals but preserve its public
+Answered flag so status changes cannot identify who nominated the removed player.
+Only the author receives a private prompt to choose again. No votes produces no
+winner; equal positive maxima produce joint winners.
+
+For Two Truths and a Lie, collecting players may explicitly sit the game out. An
+opt-out counts as a response without entering the presenter queue. Closing
+collection freezes the queue of complete active submissions in collection roster
+order. Late arrivals can vote in the next presenter round; collection must reopen
+before they can contribute statements. A removed current presenter must be skipped
+or the game finished; their unrevealed lie is never published. Draft editing uses
+its original response revision and offers saved-state recovery after a cross-tab
+conflict, preserving the unsaved local text.
+
 For Two Truths and a Lie, incomplete submissions are skipped when collection
 closes. If nobody is ready, the facilitator can reopen collection or finish the
 game. The presenter cannot guess their own lie; disconnected presenters with a

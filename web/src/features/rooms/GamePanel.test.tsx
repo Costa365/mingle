@@ -298,3 +298,83 @@ it('groups start and prompt browsing as spaced setup actions and preserves navig
   fireEvent.click(within(actions).getByRole('button', { name: 'Browse prompts' }))
   expect(changeView).toHaveBeenCalledWith('prompts')
 })
+
+it.each(['would-you-rather', 'never-have-i-ever', 'most-likely-to', 'two-truths-and-a-lie'])(
+  'lets the facilitator choose and start %s',
+  async (gameId) => {
+    vi.mocked(commandGame).mockResolvedValue({ snapshot, appliedVersion: 3, replayed: false })
+    render(<GamePanel snapshot={snapshot} disabled={false} accept={accept} refresh={refresh} />)
+    fireEvent.change(screen.getByLabelText('Choose a game'), { target: { value: gameId } })
+    fireEvent.click(screen.getByRole('button', { name: /^Start / }))
+    await waitFor(() =>
+      expect(commandGame).toHaveBeenCalledWith(
+        snapshot.id,
+        expect.objectContaining({ action: 'start', gameId }),
+      ),
+    )
+  },
+)
+it('renders only server-approved nomination options and submits their IDs', async () => {
+  vi.mocked(commandGame).mockResolvedValue({ snapshot, appliedVersion: 3, replayed: false })
+  show({
+    gameId: 'most-likely-to',
+    options: [{ value: snapshot.participants[1].id, label: 'Player' }],
+  })
+  expect(screen.queryByRole('button', { name: 'Host' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Player' }))
+  await waitFor(() =>
+    expect(commandGame).toHaveBeenCalledWith(
+      snapshot.id,
+      expect.objectContaining({ choice: snapshot.participants[1].id }),
+    ),
+  )
+})
+it('collects private statements and lie selection with required fields and saved feedback', async () => {
+  vi.mocked(commandGame).mockResolvedValue({ snapshot, appliedVersion: 3, replayed: false })
+  show({
+    gameId: 'two-truths-and-a-lie',
+    stage: 'collection',
+    allowedActions: ['submit', 'answer', 'close-collection', 'finish'],
+  })
+  for (const [i, text] of ['I juggle', 'I paint', 'I fly'].entries())
+    fireEvent.change(screen.getByLabelText(`Statement ${i + 1}`, { exact: true }), {
+      target: { value: text },
+    })
+  fireEvent.click(screen.getByRole('radio', { name: 'Statement 3 is my lie' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save statements' }))
+  await waitFor(() =>
+    expect(commandGame).toHaveBeenCalledWith(
+      snapshot.id,
+      expect.objectContaining({
+        action: 'submit',
+        submission: { statements: ['I juggle', 'I paint', 'I fly'], lieIndex: 2 },
+      }),
+    ),
+  )
+})
+it('keeps the presenter from guessing and only marks a lie in revealed results', () => {
+  show({
+    gameId: 'two-truths-and-a-lie',
+    eligible: false,
+    allowedActions: [],
+    presenter: { participantId: snapshot.youId, name: 'Host', statements: ['One', 'Two', 'Three'] },
+    options: [
+      { value: '1', label: 'One' },
+      { value: '2', label: 'Two' },
+      { value: '3', label: 'Three' },
+    ],
+  })
+  expect(screen.getByRole('button', { name: 'One' })).toBeDisabled()
+  expect(screen.getByText(/This is your turn/)).toBeVisible()
+  expect(screen.queryByText(/This was the lie/)).not.toBeInTheDocument()
+})
+
+it('gives collecting players their own form without an empty facilitator control group', () => {
+  show(
+    { gameId: 'two-truths-and-a-lie', stage: 'collection', allowedActions: ['answer', 'submit'] },
+    false,
+    true,
+  )
+  expect(screen.getByRole('button', { name: 'Save statements' })).toBeEnabled()
+  expect(screen.queryByRole('group', { name: 'Facilitator controls' })).not.toBeInTheDocument()
+})

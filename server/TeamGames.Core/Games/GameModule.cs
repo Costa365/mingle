@@ -1,19 +1,24 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using TeamGames.Core.Rooms;
 
 namespace TeamGames.Core.Games;
 
 public sealed record GameCommand(Guid CommandId, string Action, Guid? SessionId = null, Guid? RoundId = null,
-    long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0, string? PromptId = null, string? Category = null, string? Tag = null, string? Search = null, bool ResetPool = false);
+    long StageRevision = 0, long ResponseRevision = 0, string? Choice = null, string? GameId = null, long ExpectedVersion = 0, string? PromptId = null, string? Category = null, string? Tag = null, string? Search = null, bool ResetPool = false, StatementSubmission? Submission = null);
+public sealed record StatementSubmission([property: JsonRequired] IReadOnlyList<string> Statements, [property: JsonRequired] int LieIndex);
+public sealed record GameOption(string Value, string Label);
+public sealed record VoteTotal(string Value, string Label, int Count, int Percent, bool Winner);
+public sealed record PresenterView(Guid ParticipantId, string Name, IReadOnlyList<string> Statements);
 public sealed record PlayerChoiceView(Guid ParticipantId, string Name, string Choice);
 public sealed record ResponseStatusView(Guid ParticipantId, bool HasResponded);
 public sealed record RoundResult(Guid RoundId, int Number, string Prompt, string OptionA, string OptionB,
-    bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB, IReadOnlyList<PlayerChoiceView> Choices);
+    bool Skipped, int A, int B, int Passes, int Missing, int PercentA, int PercentB, IReadOnlyList<PlayerChoiceView> Choices, IReadOnlyList<VoteTotal>? Totals = null, int? LieIndex = null, string? PresenterName = null);
 public sealed record GameView(Guid SessionId, string GameId, Guid RoundId, int RoundNumber, long StageRevision,
     string Stage, string Prompt, string OptionA, string OptionB, int EligibleCount, int ResponseCount,
     bool Eligible, string? OwnChoice, long ResponseRevision, IReadOnlyList<string> AllowedActions,
-    IReadOnlyList<RoundResult> Results, int RemainingPrompts = 0, int PoolSize = 0, string Category = "", string Tag = "", string Search = "", IReadOnlyList<string>? UsedPromptIds = null, IReadOnlyList<ResponseStatusView>? Responses = null);
+    IReadOnlyList<RoundResult> Results, int RemainingPrompts = 0, int PoolSize = 0, string Category = "", string Tag = "", string Search = "", IReadOnlyList<string>? UsedPromptIds = null, IReadOnlyList<ResponseStatusView>? Responses = null, IReadOnlyList<GameOption>? Options = null, StatementSubmission? OwnSubmission = null, PresenterView? Presenter = null, string? Notice = null);
 public sealed class GameSession
 {
     public Guid Id { get; set; }

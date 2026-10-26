@@ -125,14 +125,14 @@ test('room authoring validates, survives restart and preserves round text throug
   })
 })
 
-test('random drawing respects filters, avoids repetition and lets future-game prompts be prepared', async ({
+test('random drawing respects filters, avoids repetition and lets all prompt games be prepared', async ({
   page,
 }) => {
   const id = await host(page)
   await open(page)
   await page.getByRole('combobox', { name: 'Game', exact: true }).selectOption('would-you-rather')
   await expect(page.getByText('50 prompts · 50 unused and enabled')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Draw random prompt', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Draw random prompt', exact: true })).toBeEnabled()
   await page.getByRole('combobox', { name: 'Game', exact: true }).selectOption('this-or-that')
   await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('Technology')
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()

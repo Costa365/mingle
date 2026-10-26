@@ -85,6 +85,7 @@ it('browses and composes category, tag and normalized search filters', async () 
   expect(screen.queryByText('Mountains / Seaside')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Use this prompt' }))
   expect(choose).toHaveBeenCalledWith({
+    gameId: 'this-or-that',
     promptId: 'custom',
     category: 'Food',
     tag: 'snacks',
@@ -99,13 +100,19 @@ it('draws randomly from current filters and offers reset only when exhausted', a
   await open()
   expect(screen.getByRole('button', { name: 'Draw random prompt' })).toBeDisabled()
   fireEvent.click(screen.getByRole('button', { name: 'Reset pool and draw' }))
-  expect(choose).toHaveBeenCalledWith({ category: '', tag: '', search: '', resetPool: true })
+  expect(choose).toHaveBeenCalledWith({
+    gameId: 'this-or-that',
+    category: '',
+    tag: '',
+    search: '',
+    resetPool: true,
+  })
 })
-it('prepares future games without offering unsupported gameplay', async () => {
+it('offers prepared game prompts for gameplay', async () => {
   await open()
   fireEvent.change(screen.getByLabelText('Game'), { target: { value: 'never-have-i-ever' } })
-  expect(screen.getByText(/Gameplay for this game is coming soon/)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Use this prompt' })).toBeDisabled()
+  expect(screen.queryByText(/Gameplay for this game is coming soon/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Use this prompt' })).toBeEnabled()
 })
 it('creates a room prompt with optional trimmed tags', async () => {
   await open()
