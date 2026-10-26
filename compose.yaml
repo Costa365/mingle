@@ -5,6 +5,9 @@ services:
       dockerfile: infra/api.Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Admin__Credential: "${MINGLE_ADMIN_CREDENTIAL:-}"
+      Admin__SessionMinutes: "${MINGLE_ADMIN_SESSION_MINUTES:-60}"
+      Admin__AuditRetentionDays: "${MINGLE_ADMIN_AUDIT_RETENTION_DAYS:-7}"
       Storage__DataDirectory: /data
       Security__AllowInsecureCookies: "true"
     volumes:

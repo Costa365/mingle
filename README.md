@@ -37,7 +37,12 @@ answers; Most Likely To supports anonymous nominations and joint winners; Two
 Truths and a Lie supports private statement collection, opt-out, presenter turns,
 guessing and reveal. All preserve stage/answer recovery and facilitator pacing.
 
-Administration and deployment hardening remain planned (M5–M6). Unit, API/hub
+**M5 — Administrator operations** adds `/admin`: separate expiring sessions,
+paginated room/session inspection without answers, room/game controls, confirmed
+room deletion, shared prompt management and content-free audit retention. Login
+requires a deployment-configured credential; see [administrator setup](docs/operations.md#administrator-access).
+
+Deployment hardening remains planned (M6). Unit, API/hub
 functional and desktop/mobile browser tests gate changes in CI. See the
 [implementation plan](docs/implementation-plan.md) for current verification evidence.
 
@@ -71,7 +76,7 @@ For frontend/API development without Docker, follow the
 
 ## Next implementation target
 
-Implement **M5 — Administrator operations** after M4 verification closes. The first
+Implement **M6 — Deployment resilience and experience verification** after M5 verification closes. The first
 release also includes production deployment hardening and an operator rehearsal.
 
 See the [implementation plan](docs/implementation-plan.md) for the full sequence.

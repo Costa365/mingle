@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Administration;
 using TeamGames.Core.Prompts;
 
 namespace TeamGames.Core.Games;
@@ -154,6 +155,20 @@ public class PromptGame(IGameRandom random, string id, string kind, bool namedRe
             }
             state.Revision++;
         }
+        return JsonSerializer.Serialize(state);
+    }
+    public AdminGameView Describe(GameSession session)
+    {
+        var state = Read(session.State);
+        return new(session.Id, session.GameId, state.Stage, state.RoundNumber);
+    }
+    public string Finish(string json, Room room)
+    {
+        var state = Read(json);
+        if (state.Stage == "finished") throw new RoomException("invalid_stage", "This game has already finished", 409);
+        if (state.Stage == "responding") Finalize(state, room, true);
+        state.Stage = "finished";
+        state.Revision++;
         return JsonSerializer.Serialize(state);
     }
     public GameView Project(GameSession session, Room room, Membership viewer)

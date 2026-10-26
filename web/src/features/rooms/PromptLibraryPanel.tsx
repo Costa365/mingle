@@ -389,7 +389,11 @@ export function PromptLibraryPanel({
                     <span className="prompt-category">{p.category}</span>
                     {p.tags.length > 0 && <span className="prompt-tags">{p.tags.join(' · ')}</span>}
                     <span className="prompt-source">
-                      {p.source === 'room' ? 'Room prompt' : 'Built-in'}
+                      {p.source === 'room'
+                        ? 'Room prompt'
+                        : p.source === 'administrator'
+                          ? 'Shared prompt'
+                          : 'Built-in'}
                       {p.used ? ' · Used' : ''}
                       {!p.enabled ? ' · Disabled' : ''}
                     </span>

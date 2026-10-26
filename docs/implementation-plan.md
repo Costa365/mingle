@@ -10,9 +10,11 @@ and verified locally and in hosted CI. Teams can play This or That with named
 reveals, browse 350 built-in prompts, author room-local content, filter/select/draw
 prompts, and recover identity and saved rounds across API restarts. M4 now adds
 the remaining four playable games, verified locally with 300 automated tests;
-its required hosted check gates the update to protected main. M3 passed the
+M4 passed the [required hosted check](https://github.com/Costa365/mingle/actions/runs/40296171053)
+on `c1872c0`. M5 now adds administration and is locally verified; its required
+hosted check gates the update to protected main. M3 passed the
 [required hosted check](https://github.com/Costa365/mingle/actions/runs/40178486428)
-on `edb922f`. M5–M6 remain planned; M5 is next.
+on `edb922f`. M6 remains planned and is next.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -453,18 +455,38 @@ administrator views. Adding the later games does not change room/reconnect code.
 
 ## M5 — Administrator operations
 
+Implemented and locally verified on 2026-10-26 on `feat/m5-admin`. See [M5 implementation](m5-implementation.md)
+for authentication, persistence, privacy decisions and the feature-to-test matrix.
+The administrator design is automatically approved under AGENTS.md. All required local unit and functional layers pass. Required hosted CI gates
+updating protected main with the exact verified commit.
+
 Depends on M1 and M3; integrate with all games after M4.
 
-- [ ] Add configured administrator login, separate expiring sessions, rate limits,
+- [x] Add configured administrator login, separate expiring sessions, rate limits,
   logout/revocation, and authorization tests.
-- [ ] Build paginated room/game-session overview and detail screens with status,
+- [x] Build paginated room/game-session overview and detail screens with status,
   participant counts, and last activity; exclude hidden answer data.
-- [ ] Add lock/unlock, remove player, reassign facilitator, end game, close room,
+- [x] Add lock/unlock, remove player, reassign facilitator, end game, close room,
   and confirmed room deletion using the same command path as gameplay.
-- [ ] Add shared prompt creation/editing/disabling/deletion and content-free audit
+- [x] Add shared prompt creation/editing/disabling/deletion and content-free audit
   records with retention cleanup.
-- [ ] Add unit and functional tests for every admin action, authentication/session
+- [x] Add unit and functional tests for every admin action, authentication/session
   behavior, shared-prompt operation, and audit feature, including browser flows.
+
+**Verification:** `AdminRulesTests` and all existing core regressions pass (90).
+API tests pass (55), including administrator auth/CSRF/origin/rate limits,
+secure absolute sessions and logout/rotation/restart, room controls for all five
+games, live hub removal/deletion, pagination/privacy, shared prompt CRUD/revisions,
+seed tombstones, audit retention and an actual M4-to-M5 database upgrade retaining
+private state. Frontend component/transport tests pass (126), including confirmation,
+same-UUID retry, no duplicate mutation after a refresh failure, private credential
+clearing, source labels and editor behavior. The standard Docker build and all 62
+Nginx desktop/360px browser cases pass, including keyboard login, axe, forced
+management, shared changes reaching another browser, lost-response retry across
+reload, and API restart retaining admin session/content. Four verifier unit tests,
+locked restore/builds, contracts, format, TypeScript, lint, proxy security/log
+redaction and database/key recreation checks pass (337 automated tests total).
+See [M5 implementation](m5-implementation.md) for feature-to-test mapping.
 
 **Acceptance:** A configured administrator can manage another browser's room and
 shared prompts. Unauthenticated players cannot call admin endpoints. Missing

@@ -1,3 +1,4 @@
+import { AdminPage } from '../features/admin/AdminPage'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { loadGames } from '../api/games'
@@ -298,6 +299,7 @@ export function App() {
       </header>
       <main id="main" tabIndex={-1}>
         <Routes>
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/host" element={<RoomEntry create />} />
           <Route path="/join" element={<RoomEntry create={false} />} />
           <Route path="/rooms/:id" element={<RoomLobby />} />
@@ -309,7 +311,9 @@ export function App() {
       </main>
       <footer className="site-footer">
         <span>A little play goes a long way.</span>
-        <span>Made for people, wherever they work.</span>
+        <span>
+          Made for people, wherever they work. <Link to="/admin">Administration</Link>
+        </span>
       </footer>
     </div>
   )

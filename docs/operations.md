@@ -3,7 +3,8 @@
 ## Current scope
 
 The catalogue, guest sessions, rooms, live lobbies, facilitator controls, and
-recovery are implemented. Playable games, prompts, and administration come later.
+recovery, all five games, prompt authoring and administrator operations are implemented.
+Consult the implementation plan for required verification evidence.
 Create a room at `/host` or join an invitation at `/join?code=ABC234` using the
 actual code shared by the host. Clearing cookies or changing devices loses that
 guest identity; transfer ownership before leaving if recovery might be needed.
@@ -27,6 +28,10 @@ also redact queries. Do not enable raw request/header/body logging for rooms.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
+| `Admin__Credential` / Compose `MINGLE_ADMIN_CREDENTIAL` | absent (disabled) | Deployment administrator credential, 16–1024 characters; use a random token |
+| `Admin__SessionMinutes` / Compose `MINGLE_ADMIN_SESSION_MINUTES` | `60` | Absolute session lifetime, 1–1440 minutes |
+| `Admin__AuditRetentionDays` / Compose `MINGLE_ADMIN_AUDIT_RETENTION_DAYS` | `7` | Content-free audit retention, 1–30 days |
+| `Admin__LoginRateLimit` | `5` per minute per API peer IP | Administrator login attempts, 1–100; configurable in an API override |
 | `TEAMGAMES_PORT` | `8080` | Local Nginx host port, set via environment or `.env` |
 | `Storage__DataDirectory` | `.data` locally; `/data` in Compose | Directory holding `teamgames.db` and `keys/` |
 | `ASPNETCORE_ENVIRONMENT` | `Production` in Compose | OpenAPI is exposed only in Development |
@@ -40,8 +45,7 @@ also redact queries. Do not enable raw request/header/body logging for rooms.
 | `Rooms__EntryRateLimit` | `90` per minute per API peer IP | Shared budget for session bootstrap, create, and join; use an explicit override for test traffic |
 
 For Docker, add ASP.NET settings under `api.environment` in a Compose override;
-host variables are not automatically passed into the container. `.env` currently
-supplies the published port. For `dotnet watch`, set these variables directly in
+host variables are not automatically passed into the container. `.env` supplies the published port and the three `MINGLE_ADMIN_*` settings above. For `dotnet watch`, set these variables directly in
 its environment. Entry limits see the API peer address; shared-proxy traffic shares
 that budget until a trusted client-address forwarding profile is configured.
 
@@ -140,3 +144,37 @@ Game-state JSON advances to schema version 3 on its next mutation; versions 1 an
 changing saved text or results. Keep the matching pre-upgrade database and key
 backup if rollback to an older image is needed. The local M2-to-M3 upgrade was
 verified against a stopped-volume backup, including SQLite integrity and keys.
+
+## Administrator access
+
+Open `/admin` or use the footer's Administration link. No configuration means no
+administrator access. To enable it locally, put `MINGLE_ADMIN_CREDENTIAL` in the
+ignored `.env` file with a random token (at least 16 characters), then run
+`docker compose up --build --detach --wait`. Generate a token using a password
+manager or `openssl rand -hex 32`. Keep it out of Git, logs and shared screenshots.
+For a direct API process use `Admin__Credential` in its deployment environment.
+Use HTTPS/Secure cookies for a public deployment as described above.
+
+Sign in with that credential. The session ends after one hour by default; Sign
+out revokes it server-side for duplicate tabs too. Replacing/removing the
+configured credential and recreating the API invalidates previous sessions.
+Guest identity/cookies remain separate; administrator access never makes you a
+player or reveals private statements, choices or lie indices.
+
+Rooms lists active and retained rooms with paging and status filters. Manage a
+room to lock/unlock joining, replace the facilitator, remove a non-facilitator,
+end an active game without revealing unfinished answers, close it or delete it.
+Reassign the facilitator before removing them. Deletion requires the exact room
+code and removes memberships, game data, room prompts and guest command receipts.
+Connected browsers receive the changes through the normal room publisher.
+
+Shared prompts manages all four prompt libraries. Edit/disable/delete affects
+future draws; existing rounds retain their saved content. Seeded prompt edits,
+disabling and deletions survive startup seeding. Audit shows only action names,
+times and target identifiers. Maintenance removes old audit events after the
+configured retention and removes expired/rotated administrator sessions.
+
+If a command response is lost, use Retry same action; its UUID is retained across
+reload in the current tab and admin session. A stale room/prompt conflict requires
+reviewing refreshed state and a new deliberate action. Refresh failures after a
+confirmed write never invite another mutation.

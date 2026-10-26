@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TeamGames.Core.Rooms;
+using TeamGames.Core.Administration;
 
 namespace TeamGames.Core.Games;
 
@@ -36,6 +37,8 @@ public interface IGameModule
     string Start(Room room, GameCommand command);
     string Apply(string state, Room room, Membership actor, GameCommand command);
     GameView Project(GameSession session, Room room, Membership viewer);
+    AdminGameView Describe(GameSession session);
+    string Finish(string state, Room room);
 }
 
 public sealed class GameModules(IEnumerable<IGameModule> modules)
@@ -78,6 +81,18 @@ public sealed class GameModules(IEnumerable<IGameModule> modules)
             room.GameState = JsonSerializer.Serialize(saved);
             if (command.Action == "lobby") room.Status = "lobby";
         }
+        room.Version++;
+        room.LastActivityTicks = now;
+    }
+    public IReadOnlyList<AdminGameView> Describe(Room room) => room.GameState is null ? [] :
+        Read(room.GameState).Sessions.Select(s => Get(s.GameId).Describe(s)).ToArray();
+    public void FinishAdministrative(Room room, long now)
+    {
+        if (room.Status != "playing" || room.GameState is null) throw new RoomException("invalid_stage", "There is no active game", 409);
+        var saved = Read(room.GameState);
+        var session = saved.Sessions[^1];
+        session.State = Get(session.GameId).Finish(session.State, room);
+        room.GameState = JsonSerializer.Serialize(saved);
         room.Version++;
         room.LastActivityTicks = now;
     }

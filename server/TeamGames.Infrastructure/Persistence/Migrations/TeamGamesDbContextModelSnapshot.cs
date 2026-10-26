@@ -155,6 +155,78 @@ namespace TeamGames.Infrastructure.Persistence.Migrations
                     b.ToTable("Rooms");
                 });
 
+            modelBuilder.Entity("TeamGames.Infrastructure.Administration.AdminAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AppliedVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("CommandId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedTicks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedTicks");
+
+                    b.HasIndex("SessionId", "CommandId")
+                        .IsUnique();
+
+                    b.ToTable("AdminAudits");
+                });
+
+            modelBuilder.Entity("TeamGames.Infrastructure.Administration.AdminSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CredentialVersion")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresTicks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Verifier")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AdminSessions");
+                });
+
+            modelBuilder.Entity("TeamGames.Infrastructure.Administration.PromptTombstone", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PromptTombstones");
+                });
+
             modelBuilder.Entity("TeamGames.Infrastructure.Persistence.Installation", b =>
                 {
                     b.Property<int>("Id")

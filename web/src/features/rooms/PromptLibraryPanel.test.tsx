@@ -277,3 +277,13 @@ it('provides a page heading and directly loaded library in the dedicated Prompts
   await screen.findByText('Mountains / Seaside')
   expect(screen.getByRole('heading', { name: 'Available prompts', level: 2 })).toBeVisible()
 })
+it('labels administrator-authored content as a shared prompt and never offers room editing', async () => {
+  vi.mocked(getPrompts).mockResolvedValue({
+    roomVersion: room.version,
+    prompts: [{ ...prompts[0], source: 'administrator' }],
+  })
+  await open()
+  const row = screen.getByRole('listitem')
+  expect(within(row).getByText('Shared prompt')).toBeVisible()
+  expect(within(row).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+})

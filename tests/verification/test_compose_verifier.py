@@ -24,7 +24,7 @@ if args[0] == 'cp':
         with sqlite3.connect(target) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.execute('CREATE TABLE __EFMigrationsHistory (Id TEXT)')
-            db.executemany('INSERT INTO __EFMigrationsHistory VALUES (?)', [('m0',), ('m1',), ('m2',), ('m3',)])
+            db.executemany('INSERT INTO __EFMigrationsHistory VALUES (?)', [('m0',), ('m1',), ('m2',), ('m3',), ('m5',)])
             db.execute('CREATE TABLE Installations (Id INTEGER, InstanceId TEXT, CreatedUtc TEXT)')
             db.execute("INSERT INTO Installations VALUES (1, 'fixture', 'fixture-date')")
     sys.exit(0)

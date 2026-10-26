@@ -77,6 +77,7 @@ public static class RoomEndpoints
     public static void UseRoomSecurity(this WebApplication app)
     {
         app.UseAuthentication();
+        TeamGames.Api.Administration.AdminEndpoints.UseAdminIdentity(app);
         app.UseAuthorization();
         app.UseRateLimiter();
         app.Use(async (context, next) =>

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TeamGames.Infrastructure.Administration;
 using TeamGames.Core.Rooms;
 using TeamGames.Core.Prompts;
 using TeamGames.Infrastructure.Rooms;
@@ -7,6 +8,9 @@ namespace TeamGames.Infrastructure.Persistence;
 
 public sealed class TeamGamesDbContext(DbContextOptions<TeamGamesDbContext> options) : DbContext(options)
 {
+    public DbSet<AdminSession> AdminSessions => Set<AdminSession>();
+    public DbSet<AdminAudit> AdminAudits => Set<AdminAudit>();
+    public DbSet<PromptTombstone> PromptTombstones => Set<PromptTombstone>();
     public DbSet<Prompt> Prompts => Set<Prompt>();
     public DbSet<Installation> Installations => Set<Installation>();
     public DbSet<Room> Rooms => Set<Room>();
@@ -16,6 +20,14 @@ public sealed class TeamGamesDbContext(DbContextOptions<TeamGamesDbContext> opti
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AdminSession>().HasKey(s => s.Id);
+        modelBuilder.Entity<AdminAudit>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.SessionId, a.CommandId }).IsUnique();
+            entity.HasIndex(a => a.CreatedTicks);
+        });
+        modelBuilder.Entity<PromptTombstone>().HasKey(p => p.Id);
         modelBuilder.Entity<Room>(entity =>
         {
             entity.Ignore(r => r.PromptPool);

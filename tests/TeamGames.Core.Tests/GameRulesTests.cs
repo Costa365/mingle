@@ -217,6 +217,8 @@ public sealed class GameRulesTests
     private sealed class OtherModule : IGameModule
     {
         public string Id => "other";
+        public TeamGames.Core.Administration.AdminGameView Describe(GameSession session) => new(session.Id, Id, session.State, 1);
+        public string Finish(string state, Room room) => "finished";
         public string Start(Room room, GameCommand command) => "started";
         public string Apply(string state, Room room, Membership actor, GameCommand command) => "finished";
         public GameView Project(GameSession session, Room room, Membership viewer) =>

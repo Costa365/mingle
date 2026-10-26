@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 # Own an isolated project and volume. Never run down -v against the user's app.
 project="teamgames-verification-${GITHUB_RUN_ID:-$$}"
 check_directory="$(mktemp -d)"
+# A disposable credential for this isolated verification project only. Never log it.
+export MINGLE_ADMIN_CREDENTIAL="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 export TEAMGAMES_PORT="${TEAMGAMES_TEST_PORT:-18080}"
 compose() { docker compose -p "$project" "$@"; }
 cleanup() {
@@ -44,7 +46,7 @@ directory = pathlib.Path(sys.argv[1])
 def installation(name):
     with sqlite3.connect(directory / name) as db:
         assert db.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
-        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 4
+        assert db.execute('SELECT count(*) FROM __EFMigrationsHistory').fetchone()[0] == 5
         return db.execute('SELECT Id, InstanceId, CreatedUtc FROM Installations').fetchall()
 before, after = installation('before.db'), installation('after.db')
 assert len(before) == 1 and before == after, 'Persisted installation changed after recreation'

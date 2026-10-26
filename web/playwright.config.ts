@@ -1,4 +1,7 @@
+import { randomBytes } from 'node:crypto'
 import { defineConfig, devices } from '@playwright/test'
+
+process.env.MINGLE_ADMIN_CREDENTIAL ??= randomBytes(32).toString('hex')
 
 const externalUrl = process.env.PLAYWRIGHT_BASE_URL
 

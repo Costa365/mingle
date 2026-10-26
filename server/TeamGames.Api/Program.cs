@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TeamGames.Api.Health;
+using TeamGames.Api.Administration;
 using TeamGames.Api.Rooms;
 using TeamGames.Core.Games;
 using TeamGames.Core.Storage;
@@ -39,6 +40,7 @@ builder.Services.AddHealthChecks().AddCheck<StorageHealthCheck>("storage", tags:
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.AddRooms();
+builder.AddAdministration();
 
 var app = builder.Build();
 app.UseExceptionHandler();
@@ -58,6 +60,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/api/games", (GameCatalog catalog) => catalog.Games);
 app.MapRooms();
+app.MapAdministration();
 app.MapGet("/api/games/{id}", (string id, GameCatalog catalog) =>
     catalog.Find(id) is { } game ? Results.Ok(game) : Results.NotFound());
 

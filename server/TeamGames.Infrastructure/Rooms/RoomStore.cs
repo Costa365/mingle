@@ -9,8 +9,8 @@ using TeamGames.Infrastructure.Persistence;
 
 namespace TeamGames.Infrastructure.Rooms;
 
-public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, RoomSettings settings,
-    TimeProvider time, PresenceRegistry presence, GameModules games)
+public sealed partial class RoomStore(TeamGamesDbContext database, RoomWriter writer, RoomSettings settings,
+    TimeProvider time, PresenceRegistry presence, GameModules games, TeamGames.Core.Administration.AdminSettings adminSettings)
 {
     private long Now => time.GetUtcNow().Ticks;
     private static string Fingerprint(string operation, object payload) =>
@@ -249,6 +249,9 @@ public sealed class RoomStore(TeamGamesDbContext database, RoomWriter writer, Ro
             database.Rooms.RemoveRange(deleted);
             await database.SaveChangesAsync();
             await database.Guests.Where(g => g.ExpiresTicks <= now).ExecuteDeleteAsync();
+            await database.AdminSessions.Where(s => s.ExpiresTicks <= now || s.CredentialVersion != adminSettings.CredentialVersion).ExecuteDeleteAsync();
+            var auditBefore = now - TimeSpan.FromDays(adminSettings.AuditRetentionDays).Ticks;
+            await database.AdminAudits.Where(a => a.CreatedTicks <= auditBefore).ExecuteDeleteAsync();
             return expired.Select(r => r.Id).Concat(deleted.Select(r => r.Id)).Concat(expiredGuestRooms).Distinct().ToArray();
         }
         finally { writer.Gate.Release(); }

@@ -14,7 +14,8 @@ game recovery. M3 adds 350 built-in prompts, category/tag/search filters,
 manual/random selection, explicit pool reset, facilitator room-local authoring,
 and repeatable seed updates that preserve edits. M4 implements all five games,
 including anonymous nominations and private statement collection/presenter turns.
-Administrator UI and deployment hardening remain planned (M5–M6).
+M5 adds separate administrator sessions, safe room/game management, shared prompt
+operations and retained audit events. Deployment hardening remains planned (M6).
 Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
 

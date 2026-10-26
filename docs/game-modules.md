@@ -6,10 +6,14 @@ receipts and reconnect code do not interpret a game's answers or stages.
 
 ## Server module
 
-1. Give the module a stable catalogue ID. Implement `Start`, `Apply` and `Project`,
+1. Give the module a stable catalogue ID. Implement `Start`, `Apply`, `Project`, `Describe` and `Finish`,
    and register it as an `IGameModule` in `RoomEndpoints.AddRooms`. The `GameModules`
    registry dispatches by the saved session ID/type. Never use runtime type names
    supplied by clients to deserialize state.
+   `Describe` returns only `AdminGameView` session/type/stage/round metadata.
+   `Finish` terminates without a participant actor or a reveal of unfinished input;
+   administrative authorization and deduplication happen in RoomStore. Add both
+   methods to module tests, including private collection and removed presenters.
 2. Validate the actor's allowed action, frozen round roster, round ID, stage
    revision, own response revision and input. Stage actions require the current
    facilitator. The existing RoomStore authenticates membership, serializes writes,

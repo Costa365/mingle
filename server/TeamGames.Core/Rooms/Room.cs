@@ -98,8 +98,14 @@ public static class RoomRules
 
     public static void Apply(Room room, Membership actor, RoomCommand command, long now)
     {
-        if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
         if (actor.Id != room.FacilitatorId) throw new RoomException("facilitator_required", "Only the facilitator can do that", 403);
+        ApplyManagement(room, command, now, actor.Id);
+    }
+
+    // Both facilitator and administrator commands use these state transitions.
+    public static void ApplyManagement(Room room, RoomCommand command, long now, Guid? actorId = null)
+    {
+        if (room.Status is not ("lobby" or "playing")) throw new RoomException("room_closed", "This room is closed", 410);
         if (command.ExpectedVersion != room.Version) throw new RoomException("version_changed", "The room changed; review it and try again", 409);
         switch (command.Action)
         {
@@ -110,7 +116,7 @@ public static class RoomRules
             case "remove":
             case "transfer":
                 var target = room.Members.FirstOrDefault(m => m.Id == command.TargetId && !m.Removed);
-                if (target is null || target.Id == actor.Id)
+                if (target is null || target.Id == actorId || command.Action == "remove" && target.Id == room.FacilitatorId)
                     throw new RoomException("invalid_target", "Choose another current participant");
                 if (command.Action == "remove") target.Removed = true;
                 else room.FacilitatorId = target.Id;

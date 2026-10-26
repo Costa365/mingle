@@ -44,6 +44,7 @@ export const test = base.extend<object, { backend: Backend }>({
                 cwd: path.join(repository, 'server/TeamGames.Api'),
                 env: {
                   ...process.env,
+                  Admin__Credential: process.env.MINGLE_ADMIN_CREDENTIAL,
                   ASPNETCORE_URLS: 'http://127.0.0.1:5101',
                   ASPNETCORE_ENVIRONMENT: 'Production',
                   Storage__DataDirectory: directory,

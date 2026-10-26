@@ -3,7 +3,9 @@
 Status: foundation and M1 room lifecycle implemented by 2026-10-24. The catalogue,
 guest identity, create/join/lobby, facilitator controls, authorized SignalR
 subscriptions, durable command receipts, expiry, and reconnect recovery exist.
-Game sessions, rounds, prompts, and administration below describe future milestones.
+M2–M4 implement persistent rounds, all five games and prompt libraries. M5 adds
+separate administrator sessions, status-only operations, shared prompts and audit
+retention. Required verification evidence is recorded in the implementation plan.
 M0 and M1 have passing hosted CI evidence linked in the implementation plan.
 
 ## Components and decisions
@@ -38,12 +40,12 @@ the application. [React documentation](https://react.dev/learn/build-a-react-app
 TeamGames.slnx
 server/
   TeamGames.Api/               # HTTP endpoints, guest authentication, room hub
-  TeamGames.Core/              # Catalogue, room rules and public DTOs; games planned
+  TeamGames.Core/              # Catalogue, room/game/admin rules and public DTOs
   TeamGames.Infrastructure/    # EF Core, migrations, persistence implementations
 web/
   src/
     app/                      # Routing and application shell
-    features/rooms/           # Entry forms and live lobby; other features planned
+    features/rooms/           # Room/game/prompt UI; features/admin provides administration
     games/                    # Planned: registry and game-specific views
     realtime/                 # Connection lifecycle and snapshot reconciliation
     api/                      # Typed API client and transport contracts
@@ -118,8 +120,8 @@ the exhausted filtered pool. Rounds retain their numbering across resets.
 Prompt commands share the room command receipt and transaction boundary. Library
 edits increment the room version and prompt revision, then publish safe snapshots.
 Seed updates apply only to untouched shared rows, preserve edits/disabling, and
-skip conflicting content. Administrator UI and other gameplay modules remain
-later milestones.
+skip conflicting content. Administrator UI and all gameplay modules are implemented;
+deployment hardening remains M6.
 
 ## Identity and authorization
 
@@ -336,3 +338,19 @@ The transport adds explicit `StatementSubmission`, `GameOption`, `VoteTotal` and
 these records; the room/reconnect layer still uses generic session/round/stage
 keys. A module registration and view-registry entry add a game without branching
 room lifecycle or subscription behavior. See [game-modules.md](game-modules.md).
+
+## M5 administration boundary
+
+`AdminAuthentication` uses a separate scheme/cookie, durable verifier, credential
+version and absolute expiry. `/api/admin` replaces guest identity with that scheme
+before authorization and antiforgery validation. No configured credential grants
+no access; changing it invalidates sessions. Login has a distinct rate budget.
+
+Admin DTOs contain room metadata and `IGameModule.Describe` status only. Module
+`Finish` ends input without revealing unfinished answers or impersonating any
+participant. Room management shares the same writer, version checks, rule
+transitions, transaction and post-commit publisher as guest commands. Admin
+receipts/audit rows survive room deletion without retaining the deleted content.
+Migration 5 also adds session storage and seed-deletion tombstones. Maintenance
+cleans expired sessions and retained audit events. See
+[M5 implementation](m5-implementation.md) for decisions and test mappings.

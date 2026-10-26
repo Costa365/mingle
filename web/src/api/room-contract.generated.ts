@@ -1,5 +1,86 @@
 // Generated from TeamGames.Core room DTOs. Run the contracts tool to update.
 
+export interface AdminSessionView {
+  enabled: boolean
+  authenticated: boolean
+  requestToken: string
+  expiresTicks: number | null
+}
+
+export interface AdminLogin {
+  credential: string
+}
+
+export interface AdminGameView {
+  sessionId: string
+  gameId: string
+  stage: string
+  roundNumber: number
+}
+
+export interface AdminRoomView {
+  id: string
+  code: string
+  version: number
+  status: string
+  joinLocked: boolean
+  participantCount: number
+  lastActivityTicks: number
+  facilitatorId: string
+  participants: ParticipantView[]
+  games: AdminGameView[]
+}
+
+export interface AdminRoomPage {
+  page: number
+  pageSize: number
+  total: number
+  rooms: AdminRoomView[]
+}
+
+export interface AdminRoomCommand {
+  commandId: string
+  expectedVersion: number
+  action: string
+  targetId?: string | null
+  locked?: boolean | null
+  confirmation?: string | null
+}
+
+export interface AdminPromptCommand {
+  commandId: string
+  action: string
+  input?: PromptInput | null
+  promptId?: string | null
+  promptRevision?: number
+}
+
+export interface AdminPromptPage {
+  page: number
+  pageSize: number
+  total: number
+  prompts: PromptView[]
+}
+
+export interface AdminAuditView {
+  id: string
+  createdTicks: number
+  action: string
+  targetId: string
+}
+
+export interface AdminAuditPage {
+  page: number
+  pageSize: number
+  total: number
+  events: AdminAuditView[]
+}
+
+export interface AdminCommandResult {
+  appliedVersion: number
+  replayed: boolean
+}
+
 export interface PromptInput {
   gameId: string
   category: string

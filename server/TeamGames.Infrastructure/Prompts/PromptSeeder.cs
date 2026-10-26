@@ -10,8 +10,10 @@ public static class PromptSeeder
     {
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
         var existing = await database.Prompts.Where(p => p.RoomId == null).ToDictionaryAsync(p => p.Id, cancellationToken);
+        var deleted = await database.PromptTombstones.Select(p => p.Id).ToArrayAsync(cancellationToken);
         foreach (var seed in seeds ?? PromptLibrary.All)
         {
+            if (deleted.Contains(seed.Id)) continue;
             if (PromptRules.SeedConflicts(seed, existing.Values)) continue;
             var fingerprint = PromptRules.Fingerprint(seed);
             if (!existing.TryGetValue(seed.Id, out var current))

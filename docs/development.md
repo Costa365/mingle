@@ -233,7 +233,7 @@ their gameplay is M4.
 M2 coverage is in `GameRulesTests.cs`, `GameFunctionalTests.cs`,
 `GamePanel.test.tsx`, the game transport cases in `rooms.test.ts`, and
 `web/e2e/game.spec.ts`. The full verification commands also retain all M0/M1
-regressions. `verify-compose.sh` checks all four EF migrations.
+regressions. `verify-compose.sh` checks all five EF migrations.
 
 ## M3 prompt development
 
@@ -252,3 +252,18 @@ editable through this API. Mutations share the room writer and receipt transacti
 M3 coverage lives in `PromptRulesTests`, `PromptFunctionalTests`,
 `PromptLibraryPanel.test.tsx`, and `web/e2e/prompts.spec.ts`. Tests also retain all
 M0–M2 regressions. The full local and Compose commands above include these suites.
+
+## M5 administration development
+
+The operator guide documents `/admin` and private credential configuration. Browser
+fixtures use a disposable random credential for their own API process; the Compose
+verifier generates one only for its isolated project. The user's deployment and
+credential are never reused. Admin API access uses its own session/CSRF identity
+and cookie; do not send guest tokens to admin mutations.
+
+Coverage: `AdminRulesTests`, `AdminFunctionalTests`, `AdminPage.test`,
+`PromptEditor.test`, `admin.test` and `admin.spec.ts`, with a prompt-source
+regression in `PromptLibraryPanel.test`. Migration 5 includes sessions, audit/receipt
+rows and built-in deletion tombstones. The API suite also upgrades a real M4
+database and verifies preserved private game state. `verify-compose.sh` verifies
+five applied migrations and all desktop/mobile flows.
