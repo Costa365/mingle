@@ -119,6 +119,7 @@ test('all five games complete in one room with private binary answers and anonym
     await page.getByRole('button', { name: 'Next round', exact: true }).click()
     await expect(player.getByText('Round 2 · Make your choice')).toBeVisible()
     await page.getByRole('button', { name: 'Finish game', exact: true }).click()
+    await expect(player.getByRole('heading', { name: 'Thanks for playing' })).toBeVisible()
     expect((await snapshot(player)).game!.results[1].lieIndex).toBeNull()
     expect((await new AxeBuilder({ page: player }).analyze()).violations).toEqual([])
     expect(await player.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
