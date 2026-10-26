@@ -440,7 +440,11 @@ was updated after a stopped-API database/key backup. Hosted CI uses the standard
 build and must pass before this exact commit can update protected main. The first
 hosted run exposed a browser-test race reading the second result before Finish
 completed; the test now waits for the player’s visible summary before inspecting
-that result. The application and server rules did not change for this fix.
+that result. The application and server rules did not change for this fix. A subsequent hosted
+run passed that flow but hit the fixture’s 25-second readiness limit during
+repeated container restarts (proxy 502). Container readiness now allows 60 seconds
+for API/Docker DNS/proxy recovery, matching the deployment restart check; local
+process readiness remains 25 seconds. Saved-state assertions remain unchanged.
 
 **Acceptance:** All five games work in one room without rejoining between games.
 Each supports facilitator advance and reconnection at every input/reveal stage.

@@ -68,7 +68,11 @@ export const test = base.extend<object, { backend: Backend }>({
                   return 0
                 }
               },
-              { timeout: 25_000, message: `API must become ready. ${output}` },
+              // Container restart can require Docker DNS and proxy resolution to recover.
+              {
+                timeout: composeProject ? 60_000 : 25_000,
+                message: `API must become ready. ${output}`,
+              },
             )
             .toBe(200)
         },
