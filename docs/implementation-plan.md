@@ -514,6 +514,15 @@ milestones; this milestone exercises the integrated product.
   deployment, no duplicate transitions, and no lost acknowledged responses.
 - [ ] Finish the operator guide, configuration reference, CDN/TLS examples,
   gameplay guide, troubleshooting, and module extension guide.
+- [ ] **Before public launch:** review cookies and other browser storage, their
+  necessity and lifetimes (including seven-day guest recovery), and the deployed
+  hosting/analytics setup. Publish a Privacy & Cookies notice covering the
+  operator/contact, data collected, purposes/legal bases, visibility/recipients,
+  retention/deletion and user rights; link it from the footer and create/join
+  forms. Determine whether any storage requires consent and, where required,
+  implement prior opt-in, rejection and withdrawal controls. Add unit and browser
+  functional coverage for the notice links and any consent behavior. This work
+  is deferred for now and must be completed before public launch.
 - [ ] Run the release verification matrix and record results/known limitations.
 
 **Acceptance:** All five games pass multi-browser/mobile checks through Compose.
@@ -537,6 +546,7 @@ test or acceptance failure prevents release completion and is recorded explicitl
 | Proxy/CDN behavior | Compose tests for forced socket closure, fallback, cookie forwarding, and cache headers |
 | Accessibility and mobile | Keyboard/touch checks, automated accessibility scan, and narrow/desktop screenshots |
 | Content | Seed/schema/duplicate checks plus manual prompt review |
+| Privacy before public launch | Storage/lifetime and deployed-service review, published notice and entry-point links, documented consent decision, and passing unit/browser coverage for implemented behavior |
 | Operations | Fresh install, upgrade, backup/restore, health checks, and measured load run |
 
 ## Progress and evidence
