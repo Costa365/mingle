@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace TeamGames.Api.Tests;
 
 internal sealed class ApiFactory(string dataDirectory, string environment = "Production", TimeProvider? clock = null,
-    Dictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
+    Dictionary<string, string?>? settings = null, Action<IServiceCollection>? configureServices = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -23,6 +23,7 @@ internal sealed class ApiFactory(string dataDirectory, string environment = "Pro
             if (settings is not null) foreach (var pair in settings) values[pair.Key] = pair.Value;
             configuration.AddInMemoryCollection(values);
         });
+        if (configureServices is not null) builder.ConfigureServices(configureServices);
         if (clock is not null) builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();

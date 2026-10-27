@@ -31,7 +31,9 @@ public static class RoomEndpoints
         builder.Services.AddSingleton<IGameModule, MostLikelyTo>();
         builder.Services.AddSingleton<IGameModule, TwoTruthsAndALie>();
         builder.Services.AddSingleton<GameModules>();
+        builder.Services.AddSingleton<TeamGames.Infrastructure.Prompts.PromptCache>();
         builder.Services.AddSingleton<RoomWriter>();
+        builder.Services.AddSingleton<GameCommandQueue>();
         builder.Services.AddSingleton<PresenceRegistry>();
         builder.Services.AddScoped<RoomStore>();
         builder.Services.AddAuthentication(GuestAuthentication.SchemeName).AddScheme<AuthenticationSchemeOptions, GuestAuthentication>(GuestAuthentication.SchemeName, _ => { });
@@ -71,7 +73,8 @@ public static class RoomEndpoints
         var expected = configuration["Security:PublicOrigin"] ?? $"{request.Scheme}://{request.Host}";
         if (request.Headers["Sec-Fetch-Site"] == "cross-site") return false;
         if (origin.Length == 0) return !string.Equals(request.Headers.Upgrade, "websocket", StringComparison.OrdinalIgnoreCase);
-        return string.Equals(origin, expected.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+        var canonical = Uri.TryCreate(expected, UriKind.Absolute, out var uri) ? uri.GetLeftPart(UriPartial.Authority) : expected.TrimEnd('/');
+        return string.Equals(origin, canonical, StringComparison.OrdinalIgnoreCase);
     }
 
     public static void UseRoomSecurity(this WebApplication app)
@@ -142,9 +145,9 @@ public static class RoomEndpoints
             await publisher.PublishAsync(id);
             return Results.Ok(result);
         }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();
-        app.MapPost("/api/rooms/{id:guid}/game", async (Guid id, GameCommand command, HttpContext context, RoomStore store, RoomPublisher publisher) =>
+        app.MapPost("/api/rooms/{id:guid}/game", async (Guid id, GameCommand command, HttpContext context, GameCommandQueue queue, RoomPublisher publisher) =>
         {
-            var result = await store.PlayAsync(id, GuestAuthentication.GuestId(context.User), command);
+            var result = await queue.PlayAsync(id, GuestAuthentication.GuestId(context.User), command);
             await publisher.PublishAsync(id);
             return Results.Ok(result);
         }).RequireAuthorization().AddEndpointFilter(CheckCsrf).RequireRateLimiting("room-read").Produces<CommandResult>();

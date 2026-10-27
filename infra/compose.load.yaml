@@ -1,0 +1,6 @@
+# Synthetic benchmark only: one test peer represents 400 independent players.
+services:
+  api:
+    environment:
+      Admin__Credential: ""
+      Rooms__EntryRateLimit: "10000"

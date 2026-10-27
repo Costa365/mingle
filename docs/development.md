@@ -6,7 +6,7 @@ Use a .NET 10 SDK and Node.js 22.22.1 (`.nvmrc`). `global.json` allows installed
 .NET 10 feature bands; Docker and CI pin the Microsoft SDK to 10.0.402 and the
 runtime/EF packages to 10.0.13. The local Ubuntu SDK is 10.0.113. npm and NuGet
 lockfiles pin dependencies; restore in locked mode in verification and containers.
-Docker Engine with the Compose plugin and Python 3 are required for deployment
+Docker Engine with Compose 2.24.4 or later and Python 3 are required for deployment
 checks. Git is initialized; changes to `.git` may need sandbox approval in Codex.
 
 From the repository root:
@@ -51,6 +51,8 @@ Set `Storage__DataDirectory` to a different directory when needed.
 | Frontend unit/component tests | `npm --prefix web run test -- --run` |
 | Frontend production build | `npm --prefix web run build` |
 | Browser functional tests | `npm --prefix web run test:e2e` |
+| HTTPS and backup/restore rehearsal | `bash scripts/verify-production.sh` |
+| 20 × 20 load and reconnect integrity | `bash scripts/verify-load.sh` |
 | Validate Compose | `docker compose config --quiet` |
 | Run deployment | `docker compose up --build --detach --wait` |
 | Build/lint/unit/API verification | `bash scripts/verify.sh` |
@@ -267,3 +269,35 @@ regression in `PromptLibraryPanel.test`. Migration 5 includes sessions, audit/re
 rows and built-in deletion tombstones. The API suite also upgrades a real M4
 database and verifies preserved private game state. `verify-compose.sh` verifies
 five applied migrations and all desktop/mobile flows.
+
+## M6 verification
+
+Run the non-browser verifier before starting browser/load scripts: its `npm ci`
+reinstalls dependencies, so it must not overlap a running Node/Playwright suite.
+Run the load test alone when measuring latency. Each script owns a distinct
+Compose project/volume and removes only its synthetic data.
+
+`verify-production.sh` requires OpenSSL/Python 3/Docker and generates a private
+temporary test CA, trusts it with `NODE_EXTRA_CA_CERTS`, and uses the actual TLS
+profile on loopback port 18443. It tests Secure cookies, WSS and storage recovery
+without a blanket certificate-verification bypass. Node verifies the generated CA;
+the browser trusts only that disposable certificate's public-key pin. It never publishes temporary secrets
+or backups as artifacts. `verify-load.sh` uses loopback port 18180 and 400 virtual
+SignalR clients playing two This or That rounds; it raises entry limits only in its synthetic test profile. The
+normal default remains unchanged. Override `TEAMGAMES_TLS_TEST_PORT` or
+`TEAMGAMES_LOAD_PORT` if those ports are occupied.
+
+The load target is below 1000 ms at p95 on the recorded reference host. Samples
+measure command submission to that client's received SignalR snapshot, with HTTP
+acknowledgement latency reported separately. DOM paint and external WAN latency
+are not measured. Counts, durable receipts, final totals and simultaneous reconnect
+identity are mandatory checks. `LOAD_ENFORCE_TARGET=false` makes timing report-only
+on shared CI runners while preserving all integrity assertions and failure codes.
+Never use that setting to claim the reference-host target passed.
+
+M6 adds `DeploymentTests`, `CommandBatcherTests`, `ResilienceFunctionalTests`,
+`useRoom` regression tests, `resilience.spec.ts`, storage verifier tests and the
+load metrics tests. CI runs both original verification scripts plus HTTPS/storage
+and the full 400-client integrity scenario. Reports contain synthetic aggregate
+counts/timings and sanitized host characteristics; no stored answers, cookies,
+keys, certificates or database copies are committed/uploaded.

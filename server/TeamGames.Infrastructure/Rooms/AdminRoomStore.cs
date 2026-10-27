@@ -77,6 +77,7 @@ public sealed partial class RoomStore
             Audit(sessionId, command.CommandId, "room-" + command.Action, roomId.ToString(), fingerprint, room.Version);
             await database.SaveChangesAsync();
             await transaction.CommitAsync();
+            if (command.Action == "delete") promptCache.Remove(roomId);
             return new(room.Version, false);
 
         }
@@ -139,6 +140,7 @@ public sealed partial class RoomStore
             Audit(sessionId, command.CommandId, "prompt-" + command.Action, id, fingerprint, revision);
             await database.SaveChangesAsync();
             await transaction.CommitAsync();
+            promptCache.Invalidate();
             return new(revision, false);
         }
         finally { writer.Gate.Release(); }

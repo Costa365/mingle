@@ -11,10 +11,12 @@ reveals, browse 350 built-in prompts, author room-local content, filter/select/d
 prompts, and recover identity and saved rounds across API restarts. M4 now adds
 the remaining four playable games, verified locally with 300 automated tests;
 M4 passed the [required hosted check](https://github.com/Costa365/mingle/actions/runs/40296171053)
-on `c1872c0`. M5 now adds administration and is locally verified; its required
-hosted check gates the update to protected main. M3 passed the
+on `c1872c0`. M5 administration passed
+[hosted CI](https://github.com/Costa365/mingle/actions/runs/40335513759) on `6c24a9b`.
+M6 engineering is implemented and locally verified; its required hosted check
+gates updating protected main. Public-launch privacy work remains deferred. M3 passed the
 [required hosted check](https://github.com/Costa365/mingle/actions/runs/40178486428)
-on `edb922f`. M6 remains planned and is next.
+on `edb922f`. The public-launch gates remain open; this is not a release-complete declaration.
 
 Build in order. Keep each change focused enough to review and demonstrate. Update
 the progress and decision sections as implementation reveals new information.
@@ -496,23 +498,30 @@ credentials or answer content.
 
 ## M6 — Deployment resilience and experience verification
 
+Engineering implemented and locally verified on 2026-10-27 on
+`feat/m6-release-verification`. See [M6 evidence](m6-verification.md), the
+[product-to-test matrix](release-matrix.md) and [reference-host load result](verification/m6-reference-load.json).
+**The milestone remains open for the explicitly deferred public-launch privacy
+work.** The chosen real hosting/CDN configuration also needs an operator rehearsal
+before public exposure. No public deployment or legal notice was fabricated.
+
 Depends on M0–M5. Mobile/accessibility and security checks also run during earlier
 milestones; this milestone exercises the integrated product.
 
-- [ ] Complete visual/interaction polish, game identities, empty/error states,
+- [x] Complete visual/interaction polish, game identities, empty/error states,
   responsive facilitator controls, keyboard behavior, and reduced-motion behavior.
-- [ ] Add or update unit and functional tests for every behavior added or changed
+- [x] Add or update unit and functional tests for every behavior added or changed
   during polish; reconcile feature records against the product requirements.
-- [ ] Exercise real proxy routing with socket termination, missing WebSocket
+- [x] Exercise real proxy routing with socket termination, missing WebSocket
   support/Long Polling, mobile suspension, stale snapshots, and reconnect storms.
-- [ ] Verify cookie/antiforgery/origin enforcement, rate limits, input bounds,
+- [x] Verify cookie/antiforgery/origin enforcement, rate limits, input bounds,
   role changes, expired credentials, and CDN cache exclusions.
-- [ ] Verify restart/recreation, commit-before-notification failure, expiry,
+- [x] Verify restart/recreation, commit-before-notification failure, expiry,
   migrations, persistent keys, and a documented backup/restore procedure.
-- [ ] Run a load scenario with 20 rooms × 20 participants on a recorded host.
+- [x] Run a load scenario with 20 rooms × 20 participants on a recorded host.
   Proposed target: p95 command-to-visible-update below one second in the local
   deployment, no duplicate transitions, and no lost acknowledged responses.
-- [ ] Finish the operator guide, configuration reference, CDN/TLS examples,
+- [x] Finish the operator guide, configuration reference, CDN/TLS examples,
   gameplay guide, troubleshooting, and module extension guide.
 - [ ] **Before public launch:** review cookies and other browser storage, their
   necessity and lifetimes (including seven-day guest recovery), and the deployed
@@ -523,7 +532,25 @@ milestones; this milestone exercises the integrated product.
   implement prior opt-in, rejection and withdrawal controls. Add unit and browser
   functional coverage for the notice links and any consent behavior. This work
   is deferred for now and must be completed before public launch.
-- [ ] Run the release verification matrix and record results/known limitations.
+- [x] Run the release verification matrix and record results/known limitations.
+
+**Local evidence:** 93 core tests, 66 API unit/functional tests, 129 frontend
+component/transport tests, 12 Python verifier/storage tests and two load-helper
+unit tests pass. All 66 standard Docker/Nginx desktop/360px browser cases pass,
+including real Long Polling fallback, socket termination, mobile wake and a stale
+terminal frame. The production profile passes a CA-verified HTTPS/WSS probe,
+real HTTPS browser login/round/reload with a certificate-specific public-key pin,
+Secure cookie checks, SIGKILL/WAL recovery of acknowledged changes, and full
+stopped-volume backup/mutate/restore preserving
+private state and protected identities. Build, locked restore, contracts, lint,
+format, TypeScript, proxy security/log privacy and migration/key recreation pass.
+
+The 20 × 20 reference run records 800 response samples: p95 received-hub-update
+767 ms (target below 1000 ms), acknowledgement p95 774 ms, all 400 clients
+reconnected in 1709 ms, no lost/duplicate responses. This is a loopback measurement
+on the recorded Ryzen/8-logical-CPU/15-GiB host, excluding DOM paint/WAN delay.
+Shared CI timings are report-only; its full 400-client integrity scenario remains
+required. Required hosted CI must pass for this exact commit before main updates.
 
 **Acceptance:** All five games pass multi-browser/mobile checks through Compose.
 Reconnect and restart scenarios preserve correctness. The operator can deploy,

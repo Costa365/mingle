@@ -28,7 +28,8 @@ if args[0] == 'cp':
             db.execute('CREATE TABLE Installations (Id INTEGER, InstanceId TEXT, CreatedUtc TEXT)')
             db.execute("INSERT INTO Installations VALUES (1, 'fixture', 'fixture-date')")
     sys.exit(0)
-operation = args[3]
+assert args[3:5] == ['-f', 'compose.yaml'], 'Verification must ignore implicit deployment overrides'
+operation = args[5]
 if operation == 'start' and '--wait' in args:
     print('unknown flag: --wait', file=sys.stderr)
     sys.exit(64)  # Models the older hosted Compose CLI that exposed the regression.
@@ -95,4 +96,4 @@ class ComposeVerifierTests(unittest.TestCase):
     def assert_scoped_cleanup(self, calls):
         operations = [call for call in calls if call[0] == 'compose']
         self.assertTrue(all(call[1:3] == ['-p', 'teamgames-verification-unit-verifier'] for call in operations))
-        self.assertEqual(operations[-1][3:], ['down', '--volumes', '--remove-orphans'])
+        self.assertEqual(operations[-1][3:], ['-f', 'compose.yaml', 'down', '--volumes', '--remove-orphans'])

@@ -24,3 +24,10 @@ artifacts/
 
 # Local UI design context and canvas state
 .superdesign/
+
+# Deployment secrets and stopped-volume backups
+*.pem
+*.key
+*.pfx
+*.p12
+backups/

@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using TeamGames.Api.Health;
+using TeamGames.Api.Deployment;
 using TeamGames.Api.Administration;
 using TeamGames.Api.Rooms;
 using TeamGames.Core.Games;
@@ -39,11 +40,13 @@ builder.Services.AddOptions<KeyManagementOptions>().Configure<StoragePaths, ILog
 builder.Services.AddHealthChecks().AddCheck<StorageHealthCheck>("storage", tags: ["ready"]);
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.AddDeploymentSecurity();
 builder.AddRooms();
 builder.AddAdministration();
 
 var app = builder.Build();
 app.UseExceptionHandler();
+app.UseDeploymentSecurity();
 app.UseStatusCodePages();
 app.Use(async (context, next) =>
 {

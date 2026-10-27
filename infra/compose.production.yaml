@@ -1,0 +1,24 @@
+# Explicit opt-in production TLS profile. Supply certificates and an HTTPS origin.
+services:
+  api:
+    environment:
+      Security__AllowInsecureCookies: "false"
+      Security__PublicOrigin: "${MINGLE_PUBLIC_ORIGIN:?Set the exact HTTPS public origin}"
+      Proxy__KnownProxy: "${MINGLE_WEB_IP:-172.30.96.3}"
+    networks:
+      default:
+        ipv4_address: "${MINGLE_API_IP:-172.30.96.2}"
+  web:
+    ports: !override
+      - "${MINGLE_HTTPS_BIND:-0.0.0.0}:${MINGLE_HTTPS_PORT:-443}:8443"
+    volumes:
+      - "${MINGLE_TLS_DIRECTORY:?Set the private TLS certificate directory}:/etc/nginx/tls:ro"
+      - ./infra/nginx-tls.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      default:
+        ipv4_address: "${MINGLE_WEB_IP:-172.30.96.3}"
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: "${MINGLE_NETWORK_SUBNET:-172.30.96.0/24}"

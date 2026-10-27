@@ -78,17 +78,72 @@ requests. Browser security headers include a same-origin Content Security Policy
 
 ## CDN and HTTPS boundary
 
-The supplied Compose profile is for loopback HTTP and explicitly permits insecure
-local cookies. Production cookie defaults are Secure and are covered by HTTPS API
-tests. A public TLS edge profile and forwarded-header trust configuration are not
-supplied yet: complete and verify that deployment configuration before publishing
-rooms. Do not simply expose the local HTTP profile to the internet. A CDN must
-bypass caching for `/api/*` and `/hubs/*`, preserve cookies and WebSocket upgrade
-headers, and allow the frontend's static assets. The prepared realtime proxy uses
-100-second read/send timeouts; match these to the chosen provider during M6.
-Preserve the public Host including its port. Configure `Security__PublicOrigin`
-when TLS termination changes the origin seen by the API; HTTPS scheme forwarding
-must also be restricted to trusted proxies for Secure antiforgery cookies.
+The default Compose file is for loopback HTTP. The opt-in production override
+terminates TLS directly at the non-root Nginx edge, publishes only HTTPS, sets
+Secure cookies and trusts forwarded scheme/address only from that edge's fixed
+container IP. The edge overwrites incoming forwarding headers. No
+`X-Forwarded-Host` or unrestricted proxy/network trust is enabled.
+
+Provision a valid certificate and full chain for your domain, outside this repo.
+The container's Nginx UID 101 must be able to read `fullchain.pem` and
+`privkey.pem`; keep the key restricted to its owner/group and mount it read-only.
+For example, a certificate directory owned by root with group 101, mode 750 and
+key mode 640 works on a Linux Docker host. The test rehearsal uses a disposable
+self-signed CA; public deployment requires a certificate trusted by users.
+
+Set these private deployment values in the ignored `.env`:
+
+```dotenv
+MINGLE_PUBLIC_ORIGIN=https://mingle.example.com
+MINGLE_TLS_DIRECTORY=/srv/mingle/tls
+MINGLE_HTTPS_PORT=443
+# Configure MINGLE_ADMIN_CREDENTIAL separately if administration is wanted
+```
+
+The production override requires Docker Compose 2.24.4 or later for its
+[port replacement](https://docs.docker.com/reference/compose-file/merge/#replace-value).
+Start the TLS profile explicitly:
+
+```bash
+docker compose -f compose.yaml -f infra/compose.production.yaml up --build --detach --wait
+```
+
+The profile requires an exact HTTPS origin and certificate directory. Its default
+private subnet is `172.30.96.0/24` (API `.2`, edge `.3`). If that subnet conflicts
+with your host, override `MINGLE_NETWORK_SUBNET`, `MINGLE_API_IP` and
+`MINGLE_WEB_IP` together; only the selected edge IP is trusted. HTTPS binds all
+host interfaces by default; `MINGLE_HTTPS_BIND=127.0.0.1` limits exposure when an
+additional local edge is used. The internal plain HTTP listener serves only its
+health probe and is not published. Direct clients cannot select their scheme/IP
+with forged forwarding headers. The API and proxy both limit request bodies to
+64 KiB. HSTS applies only to the HTTPS profile, without assuming subdomain policy.
+
+Renew certificates using your chosen certificate manager, then reload Nginx:
+
+```bash
+docker compose -f compose.yaml -f infra/compose.production.yaml exec web nginx -s reload
+```
+
+TLS tests use certificate verification, Secure guest/admin/antiforgery cookies,
+WSS, forgery/origin rejection and cache checks through this same profile. No
+public DNS, certificate issuance or external hosting is configured automatically.
+
+For a CDN, apply these explicit policies (not a cache-everything rule):
+
+| Request | CDN policy |
+| --- | --- |
+| `/api`, `/api/*`, `/hubs`, `/hubs/*` | Bypass cache regardless of cookies, method or status; preserve cookies and upgrades |
+| `/assets/*` with a successful hashed asset | Respect `Cache-Control: public, max-age=31536000, immutable` |
+| HTML, SPA routes and errors | Respect origin revalidation/no-store; never cache personalized API output |
+| WebSocket upgrade | Preserve Host, Origin, Cookie and Upgrade; allow fallback HTTP transports too |
+
+Example cache-bypass condition: path equals `/api` or `/hubs`, or starts with
+`/api/` or `/hubs/`. Preserve the public Host including its port and use verified
+HTTPS to the origin. Do not turn on client-controlled real-IP headers: with a CDN
+in front, the direct peer is the CDN and rate limits share that peer's budget
+until you configure a provider-specific, restricted edge trust policy. Test the
+selected provider's socket limits, cache rules and origin access restrictions
+before public launch; that provider rehearsal remains deployment-specific.
 
 ## Persistence, upgrades, and backups
 
@@ -104,8 +159,7 @@ can be recovered. Restore only while the API is stopped and preserve its ownersh
 
 Startup applies EF migrations. Review future migrations before upgrading; an
 older image is not automatically compatible with a newer schema. Keep the previous
-image and the matching data backup for rollback. A full operator backup/restore
-rehearsal is scheduled for M6. M2 verifies private answers and stage/results
+image and the matching data backup for rollback. M6 includes a tested stopped-volume backup/restore rehearsal. M2 verifies private answers and stage/results
 recovery across API restart and a local M1-to-M2 upgrade with a stopped-volume
 backup, preservation comparisons, and SQLite integrity validation.
 
@@ -178,3 +232,49 @@ If a command response is lost, use Retry same action; its UUID is retained acros
 reload in the current tab and admin session. A stale room/prompt conflict requires
 reviewing refreshed state and a new deliberate action. Refresh failures after a
 confirmed write never invite another mutation.
+
+## Backup and restore commands
+
+The storage tool operates on one existing Compose project's named `/data` volume.
+It does not recreate the container or change its deployment environment. Both
+operations stop the API, then restart it and wait for health. Backups include the
+whole database/WAL/key directory with a SHA-256 manifest and SQLite integrity and
+foreign-key checks. New backup directories are private; existing paths are never
+overwritten. Keep backups encrypted/off-host as appropriate for your deployment.
+
+```bash
+python3 scripts/storage.py backup --project team-games --directory /srv/private/mingle-backup-2026-10-27
+python3 scripts/storage.py restore --project team-games --directory /srv/private/mingle-backup-2026-10-27 --confirm team-games
+```
+
+Use your actual Compose project name (`docker compose ls`). Restore requires that
+exact name as confirmation, validates all files before stopping/modifying the
+app, rejects changed/extra files and symlinks, and restores ownership for `app`.
+It supports named volumes; bind-mount installations need an equivalent operator
+procedure. The maintenance container has no network and mounts only that project's
+volume plus the read-only backup. Neither command prints database or key content.
+
+Schedule a maintenance window for restore and have players refresh their pages
+when it completes: restored room versions can predate a browser's latest state.
+Changes accepted after the backup are intentionally rolled back. Keep the matching
+application image and backup together; do not run an old image against a newer
+schema. If recovery fails, retain the backup and inspect readiness/permissions
+before retrying. Never use `docker compose down --volumes` on live data.
+
+Run `bash scripts/verify-production.sh` to rehearse HTTPS, backup, a synthetic
+post-backup mutation, SIGKILL/WAL recovery, restore and cookie/identity/private-answer recovery in an
+isolated project. Temporary keys, credentials, backups and room state are deleted
+by its exit trap and are not verification artifacts.
+
+## Troubleshooting
+
+| Symptom | Check/action |
+| --- | --- |
+| API unhealthy | Check sanitized API logs, writable `/data`, certificate/profile settings and migration readiness; keep the volume intact |
+| Login/commands rejected with origin/CSRF errors | Use the configured public HTTPS origin, refresh the page/token, verify the edge's IP and origin configuration; do not disable validation |
+| WebSocket interrupted | Clients resubscribe and reconcile saved state; verify CDN upgrades/timeouts, allow Long Polling and use Retry connection after a sustained outage |
+| Two incognito windows are the same player | They share the browser session; use separate profiles/contexts for independent players |
+| Another tab changed an answer/prompt | Review refreshed state before deliberately replacing it; do not replay a stale revision with a new UUID automatically |
+| Admin unavailable | Configure the deployment credential and recreate the API; missing configuration intentionally grants no access |
+| Restored browser shows stale state | Refresh the page after the operator's restore window |
+| Repeated 429 responses | Check per-peer budgets and proxy trust; do not raise production limits just to hide a configuration error |

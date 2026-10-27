@@ -42,7 +42,14 @@ paginated room/session inspection without answers, room/game controls, confirmed
 room deletion, shared prompt management and content-free audit retention. Login
 requires a deployment-configured credential; see [administrator setup](docs/operations.md#administrator-access).
 
-Deployment hardening remains planned (M6). Unit, API/hub
+**M6 engineering** adds an opt-in HTTPS deployment, verified backup/restore tools,
+transport fallback/mobile recovery checks and burst processing. A recorded
+20-room × 20-player test reached p95 767 ms for received SignalR updates on the
+reference host, with 400 successful reconnects and no lost/duplicate responses.
+See [measurement scope](docs/m6-verification.md); this is not a production SLA.
+
+Public launch remains gated on the deferred Privacy & Cookies work and actual
+hosting/CDN verification. Unit, API/hub
 functional and desktop/mobile browser tests gate changes in CI. See the
 [implementation plan](docs/implementation-plan.md) for current verification evidence.
 
@@ -72,11 +79,14 @@ For frontend/API development without Docker, follow the
 | [Implementation plan](docs/implementation-plan.md) | Milestones, dependencies, and acceptance criteria |
 | [Game modules](docs/game-modules.md) | Registering modules, safe projections and required test layers |
 | [Development guide](docs/development.md) | Tooling, verified commands, testing, and workflow |
+| [Gameplay guide](docs/gameplay.md) | Playing, facilitation, prompts, privacy boundaries and recovery |
+| [Release evidence](docs/release-matrix.md) | Product requirements mapped to unit and functional checks |
 | [Operator guide](docs/operations.md) | Local containers, persistent data, health checks, and edge routing |
 
-## Next implementation target
+## Before public launch
 
-Implement **M6 — Deployment resilience and experience verification** after M5 verification closes. The first
-release also includes production deployment hardening and an operator rehearsal.
+Finish the planned privacy/storage review and deployment-specific notice, then
+rehearse the selected public hosting/CDN configuration. M6 engineering checks do
+not waive those launch gates.
 
 See the [implementation plan](docs/implementation-plan.md) for the full sequence.

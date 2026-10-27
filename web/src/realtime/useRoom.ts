@@ -56,7 +56,7 @@ export function useRoom(id: string) {
         if (!disposed && request === sequence) {
           accept(next, resynchronized)
           setError('')
-          if (next.status === 'closed') {
+          if (current.current?.status === 'closed') {
             terminal = true
             setStatus('live')
             void connection.stop()
@@ -77,7 +77,7 @@ export function useRoom(id: string) {
       try {
         const next = parseSnapshot(value)
         accept(next)
-        if (next.status === 'closed') {
+        if (current.current?.status === 'closed') {
           terminal = true
           setStatus('live')
           void connection.stop()
@@ -121,6 +121,7 @@ export function useRoom(id: string) {
             return
           } catch (cause) {
             if (disposed || terminal) return
+            await connection.stop()
             if (attempt === 4) throw cause
             updateStatus('reconnecting')
             await new Promise<void>((resolve) => {
@@ -156,8 +157,12 @@ export function useRoom(id: string) {
     )
     const wake = () => {
       if (document.visibilityState === 'hidden' || disposed || terminal) return
-      if (connection.state === HubConnectionState.Connected) void attach().catch(() => {})
-      else if (connection.state === HubConnectionState.Disconnected) retry()
+      if (connection.state === HubConnectionState.Connected) {
+        updateStatus('reconnecting')
+        void attach().catch(() => {
+          if (!terminal) updateStatus('offline')
+        })
+      } else if (connection.state === HubConnectionState.Disconnected) retry()
     }
     window.addEventListener('online', wake)
     document.addEventListener('visibilitychange', wake)

@@ -354,3 +354,37 @@ receipts/audit rows survive room deletion without retaining the deleted content.
 Migration 5 also adds session storage and seed-deletion tombstones. Maintenance
 cleans expired sessions and retained audit events. See
 [M5 implementation](m5-implementation.md) for decisions and test mappings.
+
+## M6 deployment and burst processing
+
+The opt-in production override terminates TLS at the non-root Nginx edge with a
+read-only certificate mount. Only its configured fixed IP may forward scheme and
+client address; the edge overwrites client-supplied forwarding headers. The API
+requires an HTTPS public origin and Secure cookies for this mode. Direct HTTP
+loopback development remains separate. Both edge/API enforce a 64 KiB body bound.
+This follows the restricted-proxy model in the
+[ASP.NET proxy documentation](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0)
+and the [Nginx TLS configuration](https://nginx.org/en/docs/http/configuring_https_servers.html).
+
+Game commands can share a five-millisecond per-room batch. The singleton bounded
+scheduler holds no authorization state. RoomStore uses its existing single
+SQLite writer to load the room, validate current guests/membership and each
+action/round/revision, deduplicate commands, then save all accepted outcomes and
+individual receipts in one transaction. No result is acknowledged before commit.
+A rejected command does not undo valid peers; a database failure rolls the whole
+uncommitted batch back. Replies include each command's applied version and the
+actor's private projection of the final committed batch state. No module-specific
+branches are added to transport or room lifecycle.
+
+Publication coalesces committed changes per room, reads state once and builds
+a separate authorized view per recipient. Failed notification cannot roll back
+accepted state; periodic reconciliation remains the repair path. Only prompt
+content is cached, bounded to 128 room entries and invalidated after room/shared
+content mutations or room deletion; an epoch prevents stale in-flight cache fills.
+Credentials, membership/role decisions and game answers are never cached there.
+
+See [M6 verification](m6-verification.md) for measured capacity and
+[operations](operations.md) for tested stopped-volume backup/restore. Private
+backups include SQLite/WAL and Data Protection keys, with manifest/integrity
+checks before restore. This remains one host/API process; none of these changes
+provides multi-replica coordination or automatic failover.

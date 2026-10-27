@@ -33,9 +33,13 @@ export const test = base.extend<object, { backend: Backend }>({
       const backend: Backend = {
         async start() {
           if (composeProject) {
-            await exec('docker', ['compose', '-p', composeProject, 'start', 'api'], {
-              cwd: repository,
-            })
+            await exec(
+              'docker',
+              ['compose', '-p', composeProject, '-f', 'compose.yaml', 'start', 'api'],
+              {
+                cwd: repository,
+              },
+            )
           } else {
             processHandle = spawn(
               'dotnet',
@@ -79,9 +83,13 @@ export const test = base.extend<object, { backend: Backend }>({
         },
         async stop() {
           if (composeProject) {
-            await exec('docker', ['compose', '-p', composeProject, 'stop', 'api'], {
-              cwd: repository,
-            })
+            await exec(
+              'docker',
+              ['compose', '-p', composeProject, '-f', 'compose.yaml', 'stop', 'api'],
+              {
+                cwd: repository,
+              },
+            )
           } else if (processHandle && processHandle.exitCode === null) {
             const exited = once(processHandle, 'exit')
             processHandle.kill('SIGTERM')

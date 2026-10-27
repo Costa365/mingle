@@ -8,7 +8,7 @@ check_directory="$(mktemp -d)"
 # A disposable credential for this isolated verification project only. Never log it.
 export MINGLE_ADMIN_CREDENTIAL="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 export TEAMGAMES_PORT="${TEAMGAMES_TEST_PORT:-18080}"
-compose() { docker compose -p "$project" "$@"; }
+compose() { docker compose -p "$project" -f compose.yaml "$@"; }
 cleanup() {
   status=$?
   trap - EXIT

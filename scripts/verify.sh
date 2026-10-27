@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+node --test scripts/load/metrics.test.mjs
 python3 -m unittest discover -s tests/verification -p 'test_*.py'
 dotnet restore TeamGames.slnx --locked-mode
 dotnet build TeamGames.slnx --no-restore --disable-build-servers -m:1

@@ -14,6 +14,8 @@ receipts and reconnect code do not interpret a game's answers or stages.
    `Finish` terminates without a participant actor or a reveal of unfinished input;
    administrative authorization and deduplication happen in RoomStore. Add both
    methods to module tests, including private collection and removed presenters.
+   Treat the room roster and prompt pool as read-only module context; return the
+   module's serialized state rather than mutating membership or room lifecycle.
 2. Validate the actor's allowed action, frozen round roster, round ID, stage
    revision, own response revision and input. Stage actions require the current
    facilitator. The existing RoomStore authenticates membership, serializes writes,
@@ -72,3 +74,11 @@ existing repeat/reset pool behavior. Two Truths uses player-written statements.
 Run the verification commands in [development.md](development.md). Both automated
 layers must pass in required hosted CI before protected main is updated. Test
 mock projections are never substitutes for inspecting real HTTP/hub payloads.
+
+M6 can batch concurrent game commands in one SQLite transaction. Each command is
+authorized, revision-checked and assigned its own durable receipt; none is
+acknowledged before commit. Response snapshots may reflect the final committed
+batch state, while `AppliedVersion` identifies that particular command. Invalid
+commands do not undo accepted peers; a database failure rolls the whole batch
+back. Keep these boundaries when adding a module. Batched notifications still
+project independently for each viewer and recheck current guest/membership access.

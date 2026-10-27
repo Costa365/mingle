@@ -37,6 +37,15 @@ public sealed class RoomBoundaryTests
     }
 
     [Fact]
+    public void ExplicitDefaultHttpsPortHasTheSameOriginAsTheBrowserCanonicalForm()
+    {
+        var request = new DefaultHttpContext().Request; request.Headers.Origin = "https://mingle.example";
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Security:PublicOrigin"] = "https://mingle.example:443/" }).Build();
+        Assert.True(RoomEndpoints.OriginAllowed(request, configuration));
+        request.Headers.Origin = "https://mingle.example:8443";
+        Assert.False(RoomEndpoints.OriginAllowed(request, configuration));
+    }
+    [Fact]
     public void PresenceCountsPeopleAcrossTabsAndAStaleDisconnectCannotRemoveNewConnections()
     {
         var time = new ManualClock();

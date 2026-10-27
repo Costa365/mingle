@@ -1,0 +1,28 @@
+{
+  "measuredAtUtc": "2026-10-27T08:46:23.446Z",
+  "acknowledgementP95Ms": 774,
+  "reconnectedClients": 400,
+  "reconnectMs": 1709,
+  "testEntryLimitPerMinute": 10000,
+  "rooms": 20,
+  "playersPerRoom": 20,
+  "simultaneousConnections": 400,
+  "rounds": 2,
+  "samples": 800,
+  "p50Ms": 431,
+  "p95Ms": 767,
+  "maxMs": 814,
+  "targetMs": 1000,
+  "targetMet": true,
+  "duplicateOrLostResponses": 0,
+  "transport": "WebSockets through Nginx",
+  "host": {
+    "os": "linux",
+    "release": "7.0.0-38-generic",
+    "architecture": "x64",
+    "cpus": 8,
+    "cpuModel": "AMD Ryzen 3 5300U with Radeon Graphics",
+    "totalMemoryGiB": 15
+  },
+  "gameId": "this-or-that"
+}

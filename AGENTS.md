@@ -15,7 +15,9 @@ manual/random selection, explicit pool reset, facilitator room-local authoring,
 and repeatable seed updates that preserve edits. M4 implements all five games,
 including anonymous nominations and private statement collection/presenter turns.
 M5 adds separate administrator sessions, safe room/game management, shared prompt
-operations and retained audit events. Deployment hardening remains planned (M6).
+operations and retained audit events. M6 adds opt-in HTTPS deployment, tested
+backup/restore, bounded command/publication batching and measured recovery/load
+verification. Public-launch privacy and actual provider checks remain open.
 Consult the implementation plan for verification status; do not describe unexecuted checks or
 future features as working.
 

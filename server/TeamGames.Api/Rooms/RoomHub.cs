@@ -31,35 +31,72 @@ public sealed class RoomHub(RoomStore store, PresenceRegistry presence, RoomPubl
     }
 }
 
-public sealed class RoomPublisher(IServiceScopeFactory scopes, IHubContext<RoomHub> hub,
+public class RoomPublisher(IServiceScopeFactory scopes, IHubContext<RoomHub> hub,
     PresenceRegistry presence, ILogger<RoomPublisher> logger)
 {
-    public async Task PublishAsync(Guid roomId)
+    private sealed class Pending
     {
-        foreach (var subscription in presence.Subscribers(roomId))
+        public bool Dirty { get; set; } = true;
+        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+    private readonly object sync = new();
+    private readonly Dictionary<Guid, Pending> pending = [];
+    public virtual Task PublishAsync(Guid roomId)
+    {
+        lock (sync)
         {
-            try
+            if (pending.TryGetValue(roomId, out var existing)) { existing.Dirty = true; return existing.Completion.Task; }
+            var work = new Pending(); pending.Add(roomId, work);
+            _ = Run(roomId, work);
+            return work.Completion.Task;
+        }
+    }
+    private async Task Run(Guid roomId, Pending work)
+    {
+        try
+        {
+            // Coalesce a burst of committed changes; never delay persistence or authorization.
+            await Task.Delay(10);
+            while (true)
             {
-                await using var scope = scopes.CreateAsyncScope();
-                var snapshot = await scope.ServiceProvider.GetRequiredService<RoomStore>().GetAsync(roomId, subscription.GuestId);
-                await hub.Clients.Client(subscription.ConnectionId).SendAsync("Snapshot", snapshot);
-                if (snapshot.Status == "closed")
+                lock (sync) work.Dirty = false;
+                var subscribers = presence.Subscribers(roomId);
+                if (subscribers.Length > 0)
                 {
-                    presence.Disconnect(subscription.ConnectionId);
-                    subscription.Abort();
+                    await using var scope = scopes.CreateAsyncScope();
+                    var views = await scope.ServiceProvider.GetRequiredService<RoomStore>().GetManyAsync(roomId, subscribers.Select(s => s.GuestId).Distinct().ToArray());
+                    await Task.WhenAll(subscribers.Select(async subscription =>
+                    {
+                        try
+                        {
+                            var delivery = views[subscription.GuestId];
+                            if (delivery.Error is { } error)
+                            {
+                                presence.Disconnect(subscription.ConnectionId);
+                                await hub.Clients.Client(subscription.ConnectionId).SendAsync("AccessEnded", new { code = error.Code });
+                                subscription.Abort();
+                            }
+                            else
+                            {
+                                await hub.Clients.Client(subscription.ConnectionId).SendAsync("Snapshot", delivery.Snapshot!);
+                                if (delivery.Snapshot!.Status == "closed") { presence.Disconnect(subscription.ConnectionId); subscription.Abort(); }
+                            }
+                        }
+                        catch (Exception exception) { logger.LogWarning("Room notification failed ({ErrorType})", exception.GetType().Name); }
+                    }));
+                }
+                lock (sync)
+                {
+                    if (work.Dirty) continue;
+                    pending.Remove(roomId); work.Completion.TrySetResult(); return;
                 }
             }
-            catch (RoomException exception)
-            {
-                presence.Disconnect(subscription.ConnectionId);
-                await hub.Clients.Client(subscription.ConnectionId).SendAsync("AccessEnded", new { code = exception.Code });
-                subscription.Abort();
-            }
-            catch (Exception exception)
-            {
-                // Commit already succeeded. Periodic reconciliation repairs delivery failures.
-                logger.LogWarning("Room notification failed ({ErrorType})", exception.GetType().Name);
-            }
+        }
+        catch (Exception exception)
+        {
+            // Commit already succeeded. Reconciliation repairs a failed delivery.
+            logger.LogWarning("Room notification failed ({ErrorType})", exception.GetType().Name);
+            lock (sync) { pending.Remove(roomId); work.Completion.TrySetResult(); }
         }
     }
 }
