@@ -31,10 +31,10 @@ receipts and reconnect code do not interpret a game's answers or stages.
 5. Preserve stored states and finalized totals across upgrades. The existing JSON
    envelope remains schema 3; This or That also reads its M2 legacy prompt indices
    and aggregate-only results. New prompt games reuse `PromptGame` with separate
-   IDs/content and aggregate-only reveals. Non-nomination prompt games persist
-   finalized named choices for finished summaries; only This or That publishes
-   them during play. Two Truths similarly saves finalized eligible guesses and
-   projects them only once finished, mapping each vote to its frozen statement.
+   IDs/content. Non-nomination prompt games publish finalized named choices at
+   reveal and retain them in round history and finished summaries. Two Truths
+   similarly publishes finalized eligible guesses at reveal, mapping each vote
+   to its frozen statement. Answers remain private before reveal.
    Nomination voter identities remain excluded at every stage. Legacy results
    lacking choices stay aggregate-only rather than being backfilled. Two Truths
    uses a separate state/queue.

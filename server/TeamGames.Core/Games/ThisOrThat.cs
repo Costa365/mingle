@@ -5,12 +5,12 @@ using TeamGames.Core.Prompts;
 
 namespace TeamGames.Core.Games;
 
-public sealed class ThisOrThat(IGameRandom random) : PromptGame(random, "this-or-that", "binary", true);
+public sealed class ThisOrThat(IGameRandom random) : PromptGame(random, "this-or-that", "binary");
 public sealed class WouldYouRather(IGameRandom random) : PromptGame(random, "would-you-rather", "binary");
 public sealed class NeverHaveIEver(IGameRandom random) : PromptGame(random, "never-have-i-ever", "experience");
 public sealed class MostLikelyTo(IGameRandom random) : PromptGame(random, "most-likely-to", "nomination");
 
-public class PromptGame(IGameRandom random, string id, string kind, bool namedReveal = false) : IGameModule
+public class PromptGame(IGameRandom random, string id, string kind) : IGameModule
 {
     public string Id => id;
     private sealed class Answer
@@ -195,7 +195,7 @@ public class PromptGame(IGameRandom random, string id, string kind, bool namedRe
             kind == "nomination" && own?.Choice != "pass" && !eligible.Any(id => id != viewer.Id && id.ToString() == own?.Choice) ? null : own?.Choice, own?.Revision ?? 0, actions,
             state.Results.Select(result => result with
             {
-                Choices = kind == "nomination" || !namedReveal && state.Stage != "finished" ? [] : (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
+                Choices = kind == "nomination" ? [] : (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
                     ? choice : choice with { Name = "Removed player" }).ToArray(),
                 Totals = result.Totals?.Select(total => room.Members.Any(m => !m.Removed && m.Id.ToString() == total.Value) ? total : total with { Label = "Removed player" }).ToArray()
             }).ToArray(), Pool(state, room).Count(p => !state.UsedPromptIds.Contains(p.Id)), Pool(state, room).Length,

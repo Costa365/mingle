@@ -818,3 +818,31 @@ Backend/frontend builds, C# formatting, TypeScript, lint, frontend formatting,
 generated-contract verification and diff whitespace checks passed. Browser tests
 used the installed Chromium override recorded above. Hosted CI remains the merge
 gate. Existing aggregate-only historical rounds cannot display individual choices.
+
+### Named choices at round reveal — 2026-10-29
+
+The user clarified that named choices must appear at round reveal to support
+conversation, as well as in the finished summary. Apply this to This or That,
+Would You Rather, Never Have I Ever and Two Truths and a Lie; Most Likely To keeps
+anonymous totals. Remove the finish-only projection gate and the separate named
+reveal setting. Persisted finalized choices now appear during reveal and later
+round history, while responding rounds and skipped input remain private. Earlier
+aggregate-only results still display the unavailable-choices explanation.
+
+Coverage: M4 Core tests check pre-reveal privacy, named reveal to each viewer,
+retained history, frozen eligibility, passes/missing answers, presenter exclusion,
+removals and unchanged finished summaries. M4 API tests cover live reveal via
+HTTP/hub, authorization/stale answers, restart at reveal and finished summaries.
+GamePanel component tests cover all three added named-reveal games at reveal
+and finish. M4 browser flows verify all four games' named reveals on both player
+views, reload and final summaries; nomination totals remain anonymous.
+
+Locally verified: all 99 Core tests, 69 API unit/functional tests and 149
+frontend unit/component tests passed. All four M4 desktop/mobile browser cases
+passed, exercising all five games plus real API restart recovery. Named reveal
+screenshots were visually reviewed on desktop and at 360px; keyboard navigation,
+accessibility, reload persistence and mobile overflow checks passed. Backend and
+frontend builds, C# formatting, TypeScript, lint, frontend formatting and diff
+whitespace checks passed. Browser tests used the installed Chromium override
+recorded above. Gameplay, architecture, product and module guidance now describe
+the same reveal policy. Hosted CI remains the merge gate.

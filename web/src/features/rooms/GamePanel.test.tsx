@@ -492,9 +492,13 @@ it('omits setup prompt browsing for player-written statements and participants',
   expect(screen.queryByRole('button', { name: 'Choose first prompt' })).not.toBeInTheDocument()
 })
 
-it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie'])(
-  'renders finalized named choices, passes and missing answers in the %s summary',
-  (gameId) => {
+it.each(
+  ['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie'].flatMap((gameId) =>
+    ['revealed', 'finished'].map((stage) => ({ gameId, stage })),
+  ),
+)(
+  'renders finalized named choices, passes and missing answers for $gameId at $stage',
+  ({ gameId, stage }) => {
     const statements = gameId === 'two-truths-and-a-lie'
     const experience = gameId === 'never-have-i-ever'
     const result = {
@@ -529,9 +533,12 @@ it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie'])(
     }
     show({
       gameId,
-      stage: 'finished',
-      allowedActions: ['lobby'],
-      results: [result, { ...result, roundId: 'skipped', number: 2, skipped: true, choices: [] }],
+      stage,
+      allowedActions: stage === 'finished' ? ['lobby'] : ['next', 'finish'],
+      results:
+        stage === 'revealed'
+          ? [result]
+          : [result, { ...result, roundId: 'skipped', number: 2, skipped: true, choices: [] }],
     })
     const choices = screen.getByRole('list', { name: 'Player choices for round 1' })
     expect(choices).toHaveTextContent(`Host${statements ? 'I fly' : result.optionB}`)

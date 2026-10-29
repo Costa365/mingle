@@ -92,8 +92,16 @@ test('all five games complete in one room with private binary answers and anonym
       if (id === 'most-likely-to') {
         await expect(player.getByText(/share the lead/)).toBeVisible()
         expect((await snapshot(player)).game!.results[0].choices).toEqual([])
-      } else if (id !== 'this-or-that')
-        await expect(player.getByRole('list', { name: /Player choices/ })).toHaveCount(0)
+      } else {
+        await expectSummaryChoices(page, { Host: played.optionA, Player: played.optionB })
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        await player.reload()
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        await player.screenshot({
+          path: `test-results/reveal-${id}-${test.info().project.name}.png`,
+          fullPage: true,
+        })
+      }
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
       await page.getByRole('button', { name: 'Next random prompt', exact: true }).click()
       await page.getByRole('button', { name: 'Skip round', exact: true }).click()
@@ -149,6 +157,16 @@ test('all five games complete in one room with private binary answers and anonym
     await page.getByRole('button', { name: 'Reveal answers', exact: true }).click()
     await expect(player.getByText('· This was the lie', { exact: true })).toBeVisible()
     expect((await snapshot(player)).game!.results[0].lieIndex).toBe(2)
+    await expectSummaryChoices(page, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
+    await expectSummaryChoices(player, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
+    await player.reload()
+    await expectSummaryChoices(player, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
     await page.getByRole('button', { name: 'Next round', exact: true }).click()
     await expect(player.getByText('Round 2 · Make your choice')).toBeVisible()
     await page.getByRole('button', { name: 'Finish game', exact: true }).click()

@@ -65,10 +65,10 @@ punctuation. This presentation preference applies to future screens too.
 | Game | Stages and input | Reveal and completion |
 | --- | --- | --- |
 | This or That | Facilitator selects or randomly draws a pair; players choose A, B, or pass | After reveal, show each player’s named choice alongside totals and percentages for valid votes; facilitator starts next round or ends |
-| Would You Rather? | Same binary response mechanic, with a dilemma-style prompt and two options | Same aggregate reveal; keep its own content and presentation |
-| Never Have I Ever | Show a statement; players choose “I have,” “I haven't,” or pass | Show aggregate counts; no drinking rules or elimination |
+| Would You Rather? | Same binary response mechanic, with a dilemma-style prompt and two options | Show named choices and aggregate totals after reveal; keep its own content and presentation |
+| Never Have I Ever | Show a statement; players choose “I have,” “I haven't,” or pass | Show named choices and aggregate counts after reveal; no drinking rules or elimination |
 | Most Likely To | Show a prompt; each player nominates one other eligible participant or passes | Show nomination counts and joint winners on a tie; voters remain unattributed |
-| Two Truths and a Lie | Collect three statements and a private lie selection from each player; facilitator closes collection, then each ready presenter gets a voting round | Other players guess a statement or pass; reveal the lie and guess totals, then proceed to the next presenter |
+| Two Truths and a Lie | Collect three statements and a private lie selection from each player; facilitator closes collection, then each ready presenter gets a voting round | Other players guess a statement or pass; reveal the lie, named guesses and totals, then proceed to the next presenter |
 
 For Most Likely To, response progress indicates receipt, not a still-valid vote.
 If a nominee is removed, exclude that vote from totals but preserve its public
@@ -98,11 +98,11 @@ self-voting; when fewer than two eligible players remain, offer skip or end. Two
 Truths and a Lie likewise needs at least two players for a voting round. Other
 games allow one-player previews.
 
-Finished-game summaries list each eligible player's finalized choice, pass or
+Round reveals and finished-game summaries list each eligible player's finalized choice, pass or
 missing answer for This or That, Would You Rather?, Never Have I Ever, and Two
 Truths and a Lie (using the statement text for guesses and excluding the presenter).
-This or That keeps named choices at round reveal; the other three show names only
-when the game finishes. Skipped/unrevealed rounds never publish their choices.
+Named choices appear as soon as the facilitator reveals a round and remain
+available in round history and the finished-game summary. Skipped/unrevealed rounds never publish their choices.
 Most Likely To retains anonymous nomination totals, including in the summary.
 Older aggregate-only rounds remain readable with an explanation that individual
 choices are unavailable; do not reconstruct them from retained private inputs.

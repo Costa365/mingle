@@ -7,8 +7,9 @@ unit and functional layers pass; hosted CI gates updating protected main.
 
 1. Extract the existing binary rules into a reusable prompt-game engine while
    keeping old This or That JSON readable. Register Would You Rather and Never
-   Have I Ever with their own IDs, content, labels and aggregate-only projections.
-   This or That retains its named reveal; neither new game gains named answers.
+   Have I Ever with their own IDs, content and labels. The 2026-10-29 reveal
+   refinement publishes named finalized choices for both, as in This or That,
+   and retains them in the finished summary.
 2. Add Most Likely To as a separate nomination module. Freeze the round roster,
    authorize targets, forbid self-voting, exclude removed voters/nominees, calculate
    ties deterministically and support zero valid votes and insufficient players.
@@ -67,10 +68,10 @@ unit and functional layers pass; hosted CI gates updating protected main.
 
 | Slice | Unit coverage | API/hub and persistence coverage | Browser coverage |
 | --- | --- | --- | --- |
-| Shared binary / Would You Rather | Both choices, pass/change, aggregate-only reveal, repeat/reset filters, old This or That state | Real cookie-authenticated round, private hub payloads, duplicate receipts, stale commands, restart and legacy state | Select game, prompt, answer/pass/change, reveal, next, finish and switch |
-| Never Have I Ever | Fixed labels, counts/percentages, empty reveal, pass and eligibility | Private answers, invalid input, permissions, reconnect/restart and finalized totals | Statement and two labeled choices, pass feedback, aggregate reveal and completion |
+| Shared binary / Would You Rather | Both choices, pass/change, named reveal and summary, repeat/reset filters, old This or That state | Real cookie-authenticated round, private hub payloads, duplicate receipts, stale commands, restart and legacy state | Select game, prompt, answer/pass/change, reveal, next, finish and switch |
+| Never Have I Ever | Fixed labels, counts/percentages, empty reveal, pass and eligibility | Private answers, invalid input, permissions, reconnect/restart and finalized totals | Statement and two labeled choices, pass feedback, named reveal and summary |
 | Most Likely To | No self/unknown/late targets, removal, ties, zero votes, insufficient players, anonymous projection | Cross-room/role attacks, target removal before/after reveal, duplicate votes/advance and durable restart | Nominate a teammate, change/pass, no self control, tied reveal, missing/away players and finish |
-| Two Truths and a Lie | Exactly three valid statements, lengths/lie selection, private projection, queue order, presenter exclusion, no-ready reopen, skips/removal | Inspect raw HTTP and per-viewer hub payloads at collection/guess/reveal, author-only lie index, non-author denial, stale/duplicate submissions and restart at every stage | Two independent players write/save/opt out, close collection, guess/pass, reveal lie, next presenter, finish; missing submissions and narrow keyboard flow |
+| Two Truths and a Lie | Exactly three valid statements, lengths/lie selection, private projection, queue order, presenter exclusion, no-ready reopen, skips/removal | Inspect raw HTTP and per-viewer hub payloads at collection/guess/reveal, author-only lie index, non-author denial, stale/duplicate submissions and restart at every stage | Two independent players write/save/opt out, close collection, guess/pass, reveal lie and named guesses, next presenter, summary; missing submissions and narrow keyboard flow |
 | Shared shell / switching | Registry, chooser permissions, correct controls, stage focus and pending retry state | Five sessions in one durable room, stable membership and facilitator, old game data compatibility | All five games without rejoining, chooser and prompt filtering, title/heading order, mobile overflow, reduced motion and axe checks |
 
 Use the existing verification commands from development.md. Run both test layers

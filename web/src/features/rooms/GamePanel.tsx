@@ -323,10 +323,7 @@ function GameSessionPanel({
                 {game.stage === 'finished' && <h2>Thanks for playing</h2>}
                 {['revealed', 'finished'].includes(game.stage) && (
                   <RoundResults
-                    named={
-                      gameId === 'this-or-that' ||
-                      (game.stage === 'finished' && gameId !== 'most-likely-to')
-                    }
+                    named={gameId !== 'most-likely-to'}
                     results={game.stage === 'revealed' ? game.results.slice(-1) : game.results}
                   />
                 )}
@@ -343,7 +340,7 @@ function GameSessionPanel({
                   <details className="earlier-rounds">
                     <summary>Earlier rounds ({game.results.length - 1})</summary>
                     <RoundResults
-                      named={gameId === 'this-or-that'}
+                      named={gameId !== 'most-likely-to'}
                       results={game.results.slice(0, -1)}
                     />
                   </details>

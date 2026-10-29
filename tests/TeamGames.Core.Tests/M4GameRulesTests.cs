@@ -31,7 +31,7 @@ public sealed class M4GameRulesTests
     [Theory]
     [InlineData("would-you-rather")]
     [InlineData("never-have-i-ever")]
-    public void BinaryGamesHaveIndependentContentPrivateAnswersAndAggregateOnlyReveal(string id)
+    public void BinaryGamesHaveIndependentContentPrivateAnswersAndNamedReveal(string id)
     {
         Start(id);
         Assert.Equal(id, View().GameId);
@@ -44,7 +44,9 @@ public sealed class M4GameRulesTests
         Act("answer", one, "b"); Act("reveal");
         var result = Assert.Single(View().Results);
         Assert.Equal((0, 1, 1, 1), (result.A, result.B, result.Passes, result.Missing));
-        Assert.Empty(result.Choices);
+        Assert.Equal("b", result.Choices.Single(c => c.ParticipantId == one.Id).Choice);
+        Assert.Equal("pass", result.Choices.Single(c => c.ParticipantId == two.Id).Choice);
+        Assert.Equal("missing", result.Choices.Single(c => c.ParticipantId == host.Id).Choice);
         Assert.Throws<RoomException>(() => games.Apply(room, one, stale, 3));
         Act("next"); Assert.Equal(2, View().RoundNumber);
         Assert.All(View().Responses!, r => Assert.False(r.HasResponded));
@@ -54,7 +56,7 @@ public sealed class M4GameRulesTests
     [InlineData("would-you-rather")]
     [InlineData("never-have-i-ever")]
     [InlineData("two-truths-and-a-lie")]
-    public void FinishedSummaryPublishesFinalizedChoicesOnlyWithFrozenEligibility(string id)
+    public void RevealAndFinishedSummaryPublishFinalizedChoicesWithFrozenEligibility(string id)
     {
         var missing = RoomRules.Join(room, Guid.NewGuid(), "Missing", 20);
         Start(id);
@@ -68,11 +70,13 @@ public sealed class M4GameRulesTests
         Act("answer", one, choice); Act("answer", two, "pass");
         var stale = Command("answer", one, choice);
         var late = RoomRules.Join(room, Guid.NewGuid(), "Late", 20);
+        Assert.All(new[] { host, one, two, missing, late }, viewer => Assert.Empty(View(viewer).Results));
         Act("reveal");
-        Assert.All(new[] { host, one, two, missing, late }, viewer => Assert.Empty(View(viewer).Results[0].Choices));
+        Assert.All(new[] { host, one, two, missing, late }, viewer =>
+            Assert.Equal(choice, View(viewer).Results[0].Choices.Single(c => c.ParticipantId == one.Id).Choice));
         Assert.Throws<RoomException>(() => games.Apply(room, one, stale, 3));
         Act("next");
-        Assert.Empty(View().Results[0].Choices);
+        Assert.Equal(choice, View().Results[0].Choices.Single(c => c.ParticipantId == one.Id).Choice);
         one.Removed = true;
         Act("finish");
         var result = View(two).Results[0];
@@ -155,7 +159,9 @@ public sealed class M4GameRulesTests
         Assert.Equal(2, View(one).Results[0].LieIndex);
         Assert.Null(View(one).OwnChoice);
         Assert.Equal(1, View().Results[0].Totals![2].Count);
-        Assert.Empty(View().Results[0].Choices);
+        Assert.Equal("3", View().Results[0].Choices.Single(c => c.ParticipantId == one.Id).Choice);
+        Assert.Equal("pass", View().Results[0].Choices.Single(c => c.ParticipantId == two.Id).Choice);
+        Assert.DoesNotContain(View().Results[0].Choices, c => c.ParticipantId == host.Id);
         Assert.Throws<RoomException>(() => games.Apply(room, one, stale, 3));
         Act("next"); Assert.Equal(one.Id, View(two).Presenter!.ParticipantId);
         Assert.Equal("Private one", View(two).Presenter!.Statements[0]);

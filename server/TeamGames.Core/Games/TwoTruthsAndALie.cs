@@ -168,7 +168,7 @@ public sealed class TwoTruthsAndALie : IGameModule
         var results = state.Results.Select(r => r with
         {
             PresenterName = Active(room, state.ResultPresenters[r.RoundId]) ? r.PresenterName : "Removed player",
-            Choices = state.Stage != "finished" ? [] : (r.Choices ?? []).Select(choice => Active(room, choice.ParticipantId)
+            Choices = (r.Choices ?? []).Select(choice => Active(room, choice.ParticipantId)
                 ? choice : choice with { Name = "Removed player" }).ToArray()
         }).ToArray();
         return new(session.Id, Id, state.RoundId, state.Number, state.Revision, state.Stage, collecting ? "Write your two truths and one lie" : "Which statement is the lie?", "Statements", "Guesses",
