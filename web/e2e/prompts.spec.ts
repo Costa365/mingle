@@ -42,7 +42,7 @@ test('facilitator browses launch content, filters and manually selects a built-i
     await player.getByLabel('Your name').fill('Player')
     await player.getByRole('button', { name: 'Join room' }).click()
     await expect(player.getByText('Connected', { exact: true })).toBeVisible()
-    await expect(player.getByRole('button', { name: 'Browse prompts' })).toHaveCount(0)
+    await expect(player.getByRole('button', { name: 'Choose first prompt' })).toHaveCount(0)
     await page.route(`**/api/rooms/${id}/prompts`, (route) => route.abort(), { times: 1 })
     await page.getByRole('button', { name: 'Prompts', exact: true }).click()
     await expect(page.getByRole('alert')).toHaveText(/could not be loaded/)
@@ -141,8 +141,36 @@ test('random drawing respects filters, avoids repetition and lets all prompt gam
   await expect(page.getByText('25 prompts · 24 unused and enabled')).toBeVisible()
   await page.getByRole('button', { name: 'Return to game →' }).click()
   const first = (await snapshot(page, id)).game!
-  await page.getByRole('button', { name: 'Reveal answers' }).click()
-  await page.getByRole('button', { name: 'Prompts', exact: true }).click()
+  let releaseReveal!: () => void
+  const allowReveal = new Promise<void>((resolve) => {
+    releaseReveal = resolve
+  })
+  let observedReveal!: () => void
+  const revealRequested = new Promise<void>((resolve) => {
+    observedReveal = resolve
+  })
+  await page.route(`**/api/rooms/${id}/game`, async (route) => {
+    if (route.request().postDataJSON().action === 'reveal') {
+      observedReveal()
+      await allowReveal
+    }
+    await route.continue()
+  })
+  try {
+    await page.getByRole('button', { name: 'Reveal answers' }).click()
+    await revealRequested
+    await expect(page.getByRole('button', { name: 'Choose next prompt', exact: true })).toHaveCount(
+      0,
+    )
+    await expect(page.getByText('Round 1 · Make your choice')).toBeVisible()
+  } finally {
+    releaseReveal()
+  }
+  await page.getByRole('button', { name: 'Choose next prompt', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeFocused()
+  await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue(
+    'Technology',
+  )
   await page.getByRole('button', { name: 'Draw random prompt', exact: true }).click()
   await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
   const second = (await snapshot(page, id)).game!

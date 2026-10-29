@@ -88,8 +88,9 @@ function GameSessionPanel({
     }
   }
   const blocked = disabled || busy || pending !== null
-  const control = (action: string, label: string) =>
-    game?.allowedActions.includes(action) && (
+  const control = (action: string, label: string) => {
+    if (!game?.allowedActions.includes(action)) return null
+    return (
       <button
         className={['skip', 'finish'].includes(action) ? 'text-button' : 'button'}
         disabled={blocked}
@@ -100,6 +101,14 @@ function GameSessionPanel({
         {label}
       </button>
     )
+  }
+  const promptGame = gameId !== 'two-truths-and-a-lie'
+  const chooseNextPrompt =
+    snapshot.youId === snapshot.facilitatorId &&
+    onViewChange &&
+    promptGame &&
+    game?.stage === 'revealed'
+  const nextRoundControl = control('next', promptGame ? 'Next random prompt' : 'Next round')
   const controls = game?.allowedActions.some((action) =>
     ['reveal', 'skip', 'next', 'reset', 'finish', 'lobby', 'close-collection', 'reopen'].includes(
       action,
@@ -108,7 +117,16 @@ function GameSessionPanel({
     <div className="room-buttons game-controls" role="group" aria-label="Facilitator controls">
       {control('reveal', 'Reveal answers')}
       {control('skip', 'Skip round')}
-      {control('next', 'Next round')}
+      {chooseNextPrompt ? (
+        <div className="next-round-actions" role="group" aria-label="Next round">
+          {nextRoundControl}
+          <button className="button secondary-button" onClick={() => onViewChange('prompts')}>
+            Choose next prompt
+          </button>
+        </div>
+      ) : (
+        nextRoundControl
+      )}
       {control('reset', 'Reset pool and draw')}
       {control('finish', 'Finish game')}
       {control('lobby', 'Return to lobby')}
@@ -119,8 +137,11 @@ function GameSessionPanel({
   const browsePrompts = snapshot.youId === snapshot.facilitatorId &&
     onViewChange &&
     gameId !== 'two-truths-and-a-lie' && (
-      <button className="text-button browse-prompts" onClick={() => onViewChange('prompts')}>
-        Browse prompts
+      <button
+        className={`${game ? 'text-button' : 'button secondary-button'} browse-prompts`}
+        onClick={() => onViewChange('prompts')}
+      >
+        {game ? 'Browse prompts' : 'Choose first prompt'}
       </button>
     )
   return (
@@ -196,7 +217,7 @@ function GameSessionPanel({
                         void act('start')
                       }}
                     >
-                      Start {title}
+                      {promptGame ? 'Start with random prompt' : `Start ${title}`}
                     </button>
                     {browsePrompts}
                   </div>
@@ -302,7 +323,7 @@ function GameSessionPanel({
                 {game.stage === 'finished' && <h2>Thanks for playing</h2>}
                 {['revealed', 'finished'].includes(game.stage) && (
                   <RoundResults
-                    named={gameId === 'this-or-that'}
+                    named={gameId !== 'most-likely-to'}
                     results={game.stage === 'revealed' ? game.results.slice(-1) : game.results}
                   />
                 )}
@@ -319,14 +340,14 @@ function GameSessionPanel({
                   <details className="earlier-rounds">
                     <summary>Earlier rounds ({game.results.length - 1})</summary>
                     <RoundResults
-                      named={gameId === 'this-or-that'}
+                      named={gameId !== 'most-likely-to'}
                       results={game.results.slice(0, -1)}
                     />
                   </details>
                 )}
               </>
             )}
-            {game && browsePrompts}
+            {game && !chooseNextPrompt && browsePrompts}
           </div>
           {(game?.stage === 'responding' || collecting) && game && (
             <aside className="response-sidebar" aria-labelledby="responses-heading">
@@ -420,7 +441,7 @@ function GameSessionPanel({
                 {title} · Round {game.roundNumber} · {gameStageLabel(game.stage)}
               </span>
               <button className="text-button" onClick={() => onViewChange('game')}>
-                Return to game →
+                {game.stage === 'revealed' ? 'Back to results' : 'Return to game →'}
               </button>
             </div>
           )}
@@ -474,7 +495,7 @@ function RoundResults({
           <p>
             {result.presenterName
               ? `Presenter: ${result.presenterName}`
-              : result.optionA === 'Nominate a teammate'
+              : ['Nominate a teammate', 'I have'].includes(result.optionA)
                 ? result.prompt
                 : `${result.optionA} / ${result.optionB}`}
           </p>
@@ -522,33 +543,35 @@ function RoundResults({
               <p>
                 {result.passes} passed · {result.missing} unanswered
               </p>
-              {(result.choices?.length ?? 0) > 0 ? (
-                <ul
-                  className="revealed-choices"
-                  aria-label={`Player choices for round ${result.number}`}
-                >
-                  {result.choices!.map((choice) => (
-                    <li key={choice.participantId}>
-                      <strong>{choice.name}</strong>
-                      <span>
-                        {choice.choice === 'a'
-                          ? result.optionA
-                          : choice.choice === 'b'
-                            ? result.optionB
-                            : choice.choice === 'pass'
-                              ? 'Passed'
-                              : 'No answer'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : !named ? null : (
-                <p className="room-note">
-                  Individual choices are unavailable for this earlier round
-                </p>
-              )}
             </>
           )}
+          {!result.skipped &&
+            ((result.choices?.length ?? 0) > 0 ? (
+              <ul
+                className="revealed-choices"
+                aria-label={`Player choices for round ${result.number}`}
+              >
+                {result.choices!.map((choice) => (
+                  <li key={choice.participantId}>
+                    <strong>{choice.name}</strong>
+                    <span>
+                      {choice.choice === 'a'
+                        ? result.optionA
+                        : choice.choice === 'b'
+                          ? result.optionB
+                          : choice.choice === 'pass'
+                            ? 'Passed'
+                            : choice.choice === 'missing'
+                              ? 'No answer'
+                              : (result.totals?.find((total) => total.value === choice.choice)
+                                  ?.label ?? 'Choice unavailable')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : !named ? null : (
+              <p className="room-note">Individual choices are unavailable for this earlier round</p>
+            ))}
         </article>
       ))}
     </div>

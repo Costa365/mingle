@@ -32,7 +32,7 @@ test('a real proxy connection falls back to Long Polling when WebSockets and SSE
   })
   const room = await host(page)
   expect(polls).toBeGreaterThan(0)
-  await page.getByRole('button', { name: 'Start This or That', exact: true }).click()
+  await page.getByRole('button', { name: 'Start with random prompt', exact: true }).click()
   await page.getByRole('group', { name: 'Your choice' }).getByRole('button').first().click()
   await expect(page.getByText(/Your answer is saved/)).toBeVisible()
   await page.reload()
@@ -71,7 +71,7 @@ test('socket termination, mobile wake and a stale terminal delivery preserve the
     await player.getByLabel('Your name').fill('Player')
     await player.getByRole('button', { name: 'Join room', exact: true }).click()
     await expect(player.getByText('Connected', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Start This or That', exact: true }).click()
+    await page.getByRole('button', { name: 'Start with random prompt', exact: true }).click()
     await player.getByRole('group', { name: 'Your choice' }).getByRole('button').first().click()
     await expect(player.getByText(/Your answer is saved/)).toBeVisible()
     const before = (await (
@@ -83,7 +83,7 @@ test('socket termination, mobile wake and a stale terminal delivery preserve the
     await server!.close({ code: 1012, reason: 'Synthetic socket termination' })
     await expect(player.getByText('Reconnecting…', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Reveal answers', exact: true }).click()
-    await page.getByRole('button', { name: 'Next round', exact: true }).click()
+    await page.getByRole('button', { name: 'Next random prompt', exact: true }).click()
     suspended = false
     await context.setOffline(false)
     await player.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))

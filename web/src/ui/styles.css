@@ -1879,3 +1879,25 @@ button:disabled {
     max-width: 100%;
   }
 }
+
+.next-round-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.secondary-button {
+  background: transparent;
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+.secondary-button:hover {
+  background: #e4edc9;
+}
+@media (max-width: 600px) {
+  .next-round-actions,
+  .game-start-actions {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+}

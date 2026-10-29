@@ -65,10 +65,10 @@ punctuation. This presentation preference applies to future screens too.
 | Game | Stages and input | Reveal and completion |
 | --- | --- | --- |
 | This or That | Facilitator selects or randomly draws a pair; players choose A, B, or pass | After reveal, show each player’s named choice alongside totals and percentages for valid votes; facilitator starts next round or ends |
-| Would You Rather? | Same binary response mechanic, with a dilemma-style prompt and two options | Same aggregate reveal; keep its own content and presentation |
-| Never Have I Ever | Show a statement; players choose “I have,” “I haven't,” or pass | Show aggregate counts; no drinking rules or elimination |
+| Would You Rather? | Same binary response mechanic, with a dilemma-style prompt and two options | Show named choices and aggregate totals after reveal; keep its own content and presentation |
+| Never Have I Ever | Show a statement; players choose “I have,” “I haven't,” or pass | Show named choices and aggregate counts after reveal; no drinking rules or elimination |
 | Most Likely To | Show a prompt; each player nominates one other eligible participant or passes | Show nomination counts and joint winners on a tie; voters remain unattributed |
-| Two Truths and a Lie | Collect three statements and a private lie selection from each player; facilitator closes collection, then each ready presenter gets a voting round | Other players guess a statement or pass; reveal the lie and guess totals, then proceed to the next presenter |
+| Two Truths and a Lie | Collect three statements and a private lie selection from each player; facilitator closes collection, then each ready presenter gets a voting round | Other players guess a statement or pass; reveal the lie, named guesses and totals, then proceed to the next presenter |
 
 For Most Likely To, response progress indicates receipt, not a still-valid vote.
 If a nominee is removed, exclude that vote from totals but preserve its public
@@ -96,7 +96,17 @@ Responses can be changed until the stage closes. Results include submitted votes
 only, with passes and missing answers shown separately. Most Likely To has no
 self-voting; when fewer than two eligible players remain, offer skip or end. Two
 Truths and a Lie likewise needs at least two players for a voting round. Other
-games allow one-player previews. A cumulative leaderboard is outside initial scope.
+games allow one-player previews.
+
+Round reveals and finished-game summaries list each eligible player's finalized choice, pass or
+missing answer for This or That, Would You Rather?, Never Have I Ever, and Two
+Truths and a Lie (using the statement text for guesses and excluding the presenter).
+Named choices appear as soon as the facilitator reveals a round and remain
+available in round history and the finished-game summary. Skipped/unrevealed rounds never publish their choices.
+Most Likely To retains anonymous nomination totals, including in the summary.
+Older aggregate-only rounds remain readable with an explanation that individual
+choices are unavailable; do not reconstruct them from retained private inputs.
+A cumulative leaderboard is outside initial scope.
 
 ## Prompt library
 
@@ -133,6 +143,9 @@ answer/presence updates and same-stage reconnects preserve deliberate navigation
 Opening an existing active game defaults to Game. Room and Prompts show the current
 game and a return action, and prompt filters/drafts survive navigation.
 
+Game setup pairs **Start with random prompt** with a secondary **Choose first prompt**
+button for prompt-based games. The pair stacks at mobile widths.
+
 In Game, prioritize the prompt and two answer choices. Use shorter choice controls
 (80px minimum on desktop, 64px on mobile, growing for long text); show Pass this
 round as a secondary text button with a 44px minimum touch target. Do not add
@@ -140,7 +153,11 @@ redundant pass reassurance beside it. Show saved-answer/pass feedback. A named
 Answered/Waiting list includes all eligible players; passing counts as Answered
 without identifying it before reveal. Mark away players and distinguish late
 arrivals who can participate next round. Reveal remains possible with missing
-responses. Current results and advance controls lead; earlier results are available
+responses. After reveal, facilitators see **Next random prompt** and **Choose next prompt**
+together above the results for prompt-based games, stacked on mobile. Choosing a
+prompt opens the existing library; **Back to results** returns without advancing.
+Two Truths and a Lie retains **Next round** for presenter turns.
+Current results and advance controls lead; earlier results are available
 in a collapsed history. On desktop, place response progress alongside gameplay;
 on mobile, place it after answer controls.
 

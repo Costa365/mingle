@@ -7,6 +7,16 @@ async function snapshot(page: Page) {
     await page.request.get(`/api/rooms/${new URL(page.url()).pathname.split('/').at(-1)}`)
   ).json()) as RoomSnapshot
 }
+async function expectSummaryChoices(page: Page, expected: Record<string, string>) {
+  const choices = page.getByRole('list', { name: 'Player choices for round 1', exact: true })
+  await expect(choices.getByRole('listitem')).toHaveCount(Object.keys(expected).length)
+  for (const [name, choice] of Object.entries(expected)) {
+    const row = choices
+      .getByRole('listitem')
+      .filter({ has: page.locator('strong', { hasText: new RegExp(`^${name}$`) }) })
+    await expect(row.locator('span')).toHaveText(choice)
+  }
+}
 async function create(page: Page) {
   await page.goto('/host')
   await page.getByLabel('Your name').fill('Host')
@@ -77,16 +87,47 @@ test('all five games complete in one room with private binary answers and anonym
       }
       await expect(page.getByText('2 of 2 responded')).toBeVisible()
       expect((await snapshot(page)).game?.results).toEqual([])
+      const played = (await snapshot(page)).game!
       await page.getByRole('button', { name: 'Reveal answers', exact: true }).click()
       if (id === 'most-likely-to') {
         await expect(player.getByText(/share the lead/)).toBeVisible()
         expect((await snapshot(player)).game!.results[0].choices).toEqual([])
-      } else if (id !== 'this-or-that')
-        await expect(player.getByRole('list', { name: /Player choices/ })).toHaveCount(0)
+      } else {
+        await expectSummaryChoices(page, { Host: played.optionA, Player: played.optionB })
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        await player.reload()
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        await player.screenshot({
+          path: `test-results/reveal-${id}-${test.info().project.name}.png`,
+          fullPage: true,
+        })
+      }
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      await page.getByRole('button', { name: 'Next round', exact: true }).click()
+      await page.getByRole('button', { name: 'Next random prompt', exact: true }).click()
       await page.getByRole('button', { name: 'Skip round', exact: true }).click()
       await page.getByRole('button', { name: 'Finish game', exact: true }).click()
+      await expect(player.getByRole('heading', { name: 'Thanks for playing' })).toBeVisible()
+      if (id === 'most-likely-to') {
+        await expect(player.getByRole('list', { name: /Player choices/ })).toHaveCount(0)
+        expect((await snapshot(player)).game!.results[0].choices).toEqual([])
+      } else {
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        await expect(player.getByRole('list', { name: 'Player choices for round 2' })).toHaveCount(
+          0,
+        )
+        if (id === 'never-have-i-ever')
+          await expect(player.getByText(played.prompt, { exact: true })).toBeVisible()
+        await player.reload()
+        await expectSummaryChoices(player, { Host: played.optionA, Player: played.optionB })
+        expect((await new AxeBuilder({ page: player }).analyze()).violations).toEqual([])
+        expect(
+          await player.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        ).toBe(true)
+        await player.screenshot({
+          path: `test-results/summary-${id}-${test.info().project.name}.png`,
+          fullPage: true,
+        })
+      }
       await page.getByRole('button', { name: 'Return to lobby', exact: true }).click()
       expect((await snapshot(player)).youId).toBe(originalIdentity)
     }
@@ -116,11 +157,33 @@ test('all five games complete in one room with private binary answers and anonym
     await page.getByRole('button', { name: 'Reveal answers', exact: true }).click()
     await expect(player.getByText('· This was the lie', { exact: true })).toBeVisible()
     expect((await snapshot(player)).game!.results[0].lieIndex).toBe(2)
+    await expectSummaryChoices(page, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
+    await expectSummaryChoices(player, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
+    await player.reload()
+    await expectSummaryChoices(player, {
+      [guesser === page ? 'Host' : 'Player']: game.presenter!.statements[2],
+    })
     await page.getByRole('button', { name: 'Next round', exact: true }).click()
     await expect(player.getByText('Round 2 · Make your choice')).toBeVisible()
     await page.getByRole('button', { name: 'Finish game', exact: true }).click()
     await expect(player.getByRole('heading', { name: 'Thanks for playing' })).toBeVisible()
     expect((await snapshot(player)).game!.results[1].lieIndex).toBeNull()
+    const namedGuesses = player.getByRole('list', {
+      name: 'Player choices for round 1',
+      exact: true,
+    })
+    await expect(namedGuesses).toHaveText(
+      `${guesser === page ? 'Host' : 'Player'}${game.presenter!.statements[2]}`,
+    )
+    await expect(player.getByRole('list', { name: 'Player choices for round 2' })).toHaveCount(0)
+    await player.reload()
+    await expect(namedGuesses).toHaveText(
+      `${guesser === page ? 'Host' : 'Player'}${game.presenter!.statements[2]}`,
+    )
     expect((await new AxeBuilder({ page: player }).analyze()).violations).toEqual([])
     expect(await player.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

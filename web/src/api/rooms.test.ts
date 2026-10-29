@@ -74,6 +74,49 @@ describe('game snapshot boundary', () => {
     allowedActions: ['answer'],
     results: [],
   }
+  it('accepts finished guesses matching result options and rejects unknown choice values', () => {
+    const result = {
+      roundId: game.roundId,
+      number: 1,
+      prompt: 'Which statement is the lie?',
+      optionA: 'Statements',
+      optionB: 'Guesses',
+      skipped: false,
+      a: 0,
+      b: 0,
+      passes: 0,
+      missing: 0,
+      percentA: 0,
+      percentB: 0,
+      choices: [{ participantId: room.youId, name: 'Host', choice: '1' }],
+      totals: ['First', 'Second', 'Third'].map((label, index) => ({
+        value: String(index + 1),
+        label,
+        count: 0,
+        percent: 0,
+        winner: false,
+      })),
+    }
+    const finished = {
+      ...game,
+      gameId: 'two-truths-and-a-lie',
+      stage: 'finished',
+      results: [result],
+    }
+    for (const choice of ['1', '2', '3', 'pass', 'missing']) {
+      const named = { ...result, choices: [{ ...result.choices[0], choice }] }
+      expect(
+        parseSnapshot({ ...room, status: 'playing', game: { ...finished, results: [named] } }).game
+          ?.results[0].choices?.[0].choice,
+      ).toBe(choice)
+    }
+    for (const invalid of [
+      { ...finished, results: [{ ...result, totals: [] }] },
+      { ...finished, results: [{ ...result, totals: undefined }] },
+      { ...finished, results: [{ ...result, choices: [{ ...result.choices[0], choice: '4' }] }] },
+    ])
+      expect(() => parseSnapshot({ ...room, status: 'playing', game: invalid })).toThrow()
+  })
   it('validates M4 options, private statements and cleared choices after a stage closes', () => {
     const statements = { statements: ['First', 'Second', 'Third'], lieIndex: 1 }
     const extended = {

@@ -69,7 +69,9 @@ public sealed class TwoTruthsAndALie : IGameModule
             return new VoteTotal((index + 1).ToString(), text, count, total == 0 ? 0 : (int)Math.Round(100.0 * count / total, MidpointRounding.AwayFromZero), false);
         }).ToArray();
         state.Results.Add(new(state.RoundId, state.Number, "Which statement is the lie?", "Statements", "Guesses", skipped,
-            0, 0, passes, voters.Length - total - passes, 0, 0, [], totals, skipped ? null : submission.LieIndex,
+            0, 0, passes, voters.Length - total - passes, 0, 0,
+            skipped ? [] : voters.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
+                state.Votes.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray(), totals, skipped ? null : submission.LieIndex,
             room.Members.Single(m => m.Id == presenter).Name));
         state.ResultPresenters[state.RoundId] = presenter;
     }
@@ -163,7 +165,12 @@ public sealed class TwoTruthsAndALie : IGameModule
         }
         var responses = roster.Select(id => new ResponseStatusView(id, collecting || state.Stage == "ready" ? state.Entries.ContainsKey(id) : state.Votes.ContainsKey(id))).ToArray();
         var publicPresenter = presenterActive && state.Stage is "responding" or "revealed" ? new PresenterView(state.Presenter!.Value, room.Members.Single(m => m.Id == state.Presenter).Name, state.Entries[state.Presenter.Value].Submission!.Statements) : null;
-        var results = state.Results.Select(r => r with { PresenterName = Active(room, state.ResultPresenters[r.RoundId]) ? r.PresenterName : "Removed player" }).ToArray();
+        var results = state.Results.Select(r => r with
+        {
+            PresenterName = Active(room, state.ResultPresenters[r.RoundId]) ? r.PresenterName : "Removed player",
+            Choices = (r.Choices ?? []).Select(choice => Active(room, choice.ParticipantId)
+                ? choice : choice with { Name = "Removed player" }).ToArray()
+        }).ToArray();
         return new(session.Id, Id, state.RoundId, state.Number, state.Revision, state.Stage, collecting ? "Write your two truths and one lie" : "Which statement is the lie?", "Statements", "Guesses",
             roster.Length, responses.Count(r => r.HasResponded), eligible, collecting ? entry?.Passed == true ? "pass" : null : state.Stage == "responding" && presenterActive ? vote?.Choice : null,
             collecting ? entry?.Revision ?? 0 : vote?.Revision ?? 0, actions, results, Responses: responses,

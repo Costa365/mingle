@@ -65,7 +65,9 @@ public sealed class M4GameFunctionalTests : IDisposable
             using var retry = await host.Post($"/api/rooms/{room.Id}/game", answer);
             Assert.True((await retry.Content.ReadFromJsonAsync<CommandResult>())!.Replayed);
             var stale = Command(await player.Snapshot(room.Id), "answer", "pass");
-            room = await Play(host, restored, "reveal"); Assert.Empty(room.Game!.Results[0].Choices);
+            room = await Play(host, restored, "reveal");
+            if (id == "most-likely-to") Assert.Empty(room.Game!.Results[0].Choices);
+            else Assert.Equal("a", room.Game!.Results[0].Choices.Single(c => c.Name == "Host").Choice);
             await Denied(player, room, stale, HttpStatusCode.Conflict);
             room = await Play(host, room, "next"); room = await Play(host, room, "finish"); room = await Play(host, room, "lobby");
             Assert.Equal("lobby", room.Status);
@@ -114,7 +116,7 @@ public sealed class M4GameFunctionalTests : IDisposable
         {
             room = await host.Snapshot(room.Id); Assert.Equal("2", room.Game!.OwnChoice); Assert.Empty(room.Game.Results);
             room = await Play(host, room, "reveal"); Assert.Equal(1, room.Game!.Results[0].LieIndex);
-            Assert.Equal(1, room.Game.Results[0].Totals![1].Count); Assert.Empty(room.Game.Results[0].Choices);
+            Assert.Equal(1, room.Game.Results[0].Totals![1].Count); Assert.Equal("2", Assert.Single(room.Game.Results[0].Choices).Choice);
         }
         using (var factory = new ApiFactory(directory))
         using (var host = await Browser.Create(factory, hc))
@@ -171,5 +173,87 @@ public sealed class M4GameFunctionalTests : IDisposable
             Assert.Equal("Removed player", room.Game.Results[0].PresenterName);
         }
     }
+    [Theory]
+    [InlineData("would-you-rather")]
+    [InlineData("never-have-i-ever")]
+    [InlineData("two-truths-and-a-lie")]
+    public async Task NamedRevealAndSummaryArePrivateUntilRevealAndDurableAcrossRestarts(string id)
+    {
+        CookieContainer hc, pc; RoomSnapshot room; Guid playerId;
+        using (var factory = new ApiFactory(directory))
+        using (var host = await Browser.Create(factory))
+        using (var player = await Browser.Create(factory))
+        using (var passer = await Browser.Create(factory))
+        using (var missing = await Browser.Create(factory))
+        using (var outsider = await Browser.Create(factory))
+        {
+            room = (await host.Enter(new(Guid.NewGuid(), "Host"))).Snapshot;
+            playerId = (await player.Enter(new(Guid.NewGuid(), "Player", room.Code), false)).Snapshot.YouId;
+            await passer.Enter(new(Guid.NewGuid(), "Passer", room.Code), false);
+            await missing.Enter(new(Guid.NewGuid(), "Missing", room.Code), false);
+            room = await Play(host, await host.Snapshot(room.Id), "start", id: id);
+            if (id == "two-truths-and-a-lie")
+            {
+                room = await Play(host, room, "submit", submission: new(["First statement", "Second statement", "Third statement"], 1));
+                room = await Play(host, room, "close-collection");
+            }
+            await Play(player, await player.Snapshot(room.Id), "answer", id == "two-truths-and-a-lie" ? "2" : "b");
+            await Play(passer, await passer.Snapshot(room.Id), "answer", "pass");
+            var stale = Command(await player.Snapshot(room.Id), "answer", "pass");
+            await using var revealHub = player.Hub(factory);
+            var reveals = Channel.CreateUnbounded<RoomSnapshot>();
+            revealHub.On<RoomSnapshot>("Snapshot", s => reveals.Writer.TryWrite(s));
+            await revealHub.StartAsync(); await revealHub.InvokeAsync("Subscribe", room.Id);
+            using var revealTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var hidden = await reveals.Reader.ReadAsync(revealTimeout.Token);
+            Assert.Empty(hidden.Game!.Results);
+            Assert.Empty((await host.Snapshot(room.Id)).Game!.Results);
+            room = await Play(host, await host.Snapshot(room.Id), "reveal");
+            RoomSnapshot revealed;
+            do { revealed = await reveals.Reader.ReadAsync(revealTimeout.Token); } while (revealed.Game?.Stage != "revealed");
+            Assert.Equal(id == "two-truths-and-a-lie" ? "2" : "b", revealed.Game.Results[0].Choices.Single(c => c.Name == "Player").Choice);
+            Assert.Equal("pass", room.Game!.Results[0].Choices.Single(c => c.Name == "Passer").Choice);
+            Assert.Equal("missing", (await player.Snapshot(room.Id)).Game!.Results[0].Choices.Single(c => c.Name == "Missing").Choice);
+            await Denied(player, room, stale, HttpStatusCode.Conflict);
+            Assert.Equal(HttpStatusCode.Forbidden, (await outsider.Client.GetAsync($"/api/rooms/{room.Id}")).StatusCode);
+            hc = host.Cookies; pc = player.Cookies;
+        }
+        using (var factory = new ApiFactory(directory))
+        using (var host = await Browser.Create(factory, hc))
+        using (var player = await Browser.Create(factory, pc))
+        {
+            room = await host.Snapshot(room.Id); Assert.NotEmpty(room.Game!.Results[0].Choices);
+            await using var hub = player.Hub(factory);
+            var channel = Channel.CreateUnbounded<RoomSnapshot>();
+            hub.On<RoomSnapshot>("Snapshot", s => channel.Writer.TryWrite(s));
+            await hub.StartAsync(); await hub.InvokeAsync("Subscribe", room.Id);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var before = await channel.Reader.ReadAsync(timeout.Token);
+            Assert.Equal(id == "two-truths-and-a-lie" ? "2" : "b", before.Game!.Results[0].Choices.Single(c => c.Name == "Player").Choice);
+            var finish = Command(room, "finish");
+            using var applied = await host.Post($"/api/rooms/{room.Id}/game", finish); applied.EnsureSuccessStatusCode();
+            using var replay = await host.Post($"/api/rooms/{room.Id}/game", finish);
+            Assert.True((await replay.Content.ReadFromJsonAsync<CommandResult>())!.Replayed);
+            RoomSnapshot finished;
+            do { finished = await channel.Reader.ReadAsync(timeout.Token); } while (finished.Game?.Stage != "finished");
+            var choices = finished.Game.Results[0].Choices;
+            Assert.Equal(id == "two-truths-and-a-lie" ? "2" : "b", choices.Single(c => c.Name == "Player").Choice);
+            Assert.Equal("pass", choices.Single(c => c.Name == "Passer").Choice);
+            Assert.Equal("missing", choices.Single(c => c.Name == "Missing").Choice);
+            Assert.Equal(id == "two-truths-and-a-lie" ? 3 : 4, choices.Count);
+            room = (await host.Command(room.Id, new(Guid.NewGuid(), (await host.Snapshot(room.Id)).Version, "remove", playerId))).Snapshot;
+        }
+        using (var factory = new ApiFactory(directory))
+        using (var host = await Browser.Create(factory, hc))
+        using (var player = await Browser.Create(factory, pc))
+        {
+            var restored = await host.Snapshot(room.Id);
+            Assert.Equal("finished", restored.Game!.Stage);
+            Assert.Equal("Removed player", restored.Game.Results[0].Choices.Single(c => c.ParticipantId == playerId).Name);
+            Assert.Equal(JsonSerializer.Serialize(room.Game), JsonSerializer.Serialize(restored.Game));
+            Assert.Equal(HttpStatusCode.Forbidden, (await player.Client.GetAsync($"/api/rooms/{room.Id}")).StatusCode);
+        }
+    }
+
     public void Dispose() { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); if (Directory.Exists(directory)) Directory.Delete(directory, true); }
 }

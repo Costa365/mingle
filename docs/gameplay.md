@@ -32,10 +32,14 @@ round's saved text.
 | Game | Play | After reveal |
 | --- | --- | --- |
 | This or That | Choose either option or pass; change until reveal | Named choices and totals invite conversation |
-| Would You Rather? | Choose one side of a dilemma or pass | Aggregate totals; individual choices stay private |
-| Never Have I Ever | Choose I have, I haven't or pass | Aggregate totals without individual identities |
+| Would You Rather? | Choose one side of a dilemma or pass | Named choices and aggregate totals invite conversation |
+| Never Have I Ever | Choose I have, I haven't or pass | Named I have / I haven't choices and aggregate totals |
 | Most Likely To | Nominate another eligible teammate; no self-voting | Anonymous nomination totals and joint winners |
-| Two Truths and a Lie | Privately save three distinct statements and mark the lie, or sit out | Each ready player presents; others guess, then the lie and anonymous guess totals appear |
+| Two Truths and a Lie | Privately save three distinct statements and mark the lie, or sit out | Each ready player presents; others guess, then the lie, named guesses and totals appear |
+
+Named choices remain in the finished summary for every game except Most Likely To,
+which keeps nomination totals anonymous. Choices stay private before reveal;
+skipped rounds never publish their answers.
 
 Passing is optional and secondary. In Two Truths, the lie is visible only to its
 author until that presenter's reveal. The facilitator cannot inspect private

@@ -700,3 +700,185 @@ Confirm the CDN/hosting environment when preparing production configuration; use
 documented proxy defaults locally. Tune retention/capacity from product feedback
 and measured load. Choose final brand assets during UI work. The defaults in
 [product.md](product.md) permit implementation to begin without these answers.
+
+### Next-round prompt discovery — 2026-10-29
+
+Implement the user's selected option 1: after reveal in all four prompt-based
+games, group primary **Next random round** and secondary **Choose next prompt**
+above results. Stack the pair on mobile, retain existing library selection and
+server commands, and offer **Back to results** without advancing. Preserve
+**Next round** for Two Truths and a Lie presenter turns and facilitator-only
+visibility. Exhausted pools still offer prompt selection alongside reset.
+
+Acceptance coverage:
+
+- `GamePanel.test.tsx`: grouped controls and navigation for each prompt game,
+  exhausted-pool selection, existing random command dispatch, participant exclusion
+  and presenter-turn labels.
+- `game.spec.ts`: real API/browser flow for every prompt game on desktop and
+  360px mobile; adjacent/stacked geometry, keyboard focus/order, return without
+  advancing, selected prompt publication to a second player, random advance,
+  participant exclusion, accessibility and overflow. Existing game, M4 and
+  resilience selectors follow the clarified random label.
+
+Implemented and locally verified: all 134 frontend unit/component tests passed;
+16 existing desktop/mobile game, M4 and resilience browser cases passed. Both new
+browser cases passed after correcting their assertion to compare statement text
+for Never Have I Ever and Most Likely To, rather than fixed response labels.
+The new cases each exercise all four prompt games. Desktop and 360px mobile
+screenshots were visually reviewed; keyboard order, accessibility and overflow
+checks passed. Backend build, frontend TypeScript/production build, lint,
+formatting and diff whitespace checks passed. Browser tests used the installed
+Chromium via `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` because the current Playwright
+package's default browser binary was unavailable. Required hosted CI remains the
+merge gate; no milestone status changed.
+
+
+### Matching game setup buttons — 2026-10-29
+
+Use the same secondary button styling for **Browse prompts** beside the start
+button before a prompt-based game begins, with equal-height adjacent buttons on
+desktop and full-width stacked buttons on mobile. Keep the existing navigation
+and labels. Two Truths and a Lie and participant setup do not offer prompt browsing.
+
+Acceptance coverage: `GamePanel.test.tsx` checks all four prompt-game setup
+buttons, navigation without a game command, participant exclusion and the
+player-written game exception. The `rooms.spec.ts` game setup browser case
+exercises all four games with the real API, keyboard navigation, responsive
+geometry, accessibility and starting a game on desktop and 360px mobile.
+Locally verified: all 138 frontend unit/component tests and four targeted browser
+cases passed (setup and in-game prompt selection on desktop and 360px mobile).
+These browser cases exercise all four prompt games. Setup screenshots were
+visually reviewed on both viewports; keyboard, accessibility, geometry and
+overflow checks passed. Frontend TypeScript/production build, lint, formatting
+and diff whitespace checks passed. Browser tests used the installed Chromium
+with the same environment override recorded above. Hosted CI remains the merge gate.
+
+
+### Consistent random and selected prompt labels — 2026-10-29
+
+Setup now uses **Start with random prompt** and **Choose first prompt**; reveal
+uses **Next random prompt** and **Choose next prompt**. This names the random
+behavior explicitly and distinguishes choosing the first prompt from later ones.
+Two Truths and a Lie retains its game start and presenter-turn wording; browsing
+during an active responding round keeps **Browse prompts**.
+
+Acceptance: GamePanel component tests and desktop/mobile setup and in-game
+browser flows verify the exact labels, navigation, random and selected start/next
+commands, participant exclusions and the statement-game exception. Existing
+browser selectors are updated for the new setup label.
+
+Locally verified: 138 frontend unit/component tests and all four targeted
+browser cases passed, covering setup and next-round controls for all four prompt
+games on desktop and 360px mobile. Screenshots confirm the longer setup label
+fits on both viewports. Keyboard navigation, accessibility, button geometry and
+overflow checks passed, as did TypeScript/production build, lint, formatting and
+diff whitespace checks. Browser execution used the installed Chromium override
+recorded above. Hosted CI remains the merge gate.
+
+### Finished-game named voting summaries — 2026-10-29
+
+The user requested named voting summaries like This or That. They explicitly
+confirmed that Most Likely To must keep nomination totals only. Would You Rather,
+Never Have I Ever and Two Truths and a Lie therefore persist eligible finalized
+choices at reveal but project them only after game finish. Presenters are not
+voters; skipped/unrevealed rounds never expose their submissions. Names of removed
+players use the existing neutral label; finalized choices do not change after
+roster changes. Old aggregate-only rounds are not backfilled from private inputs.
+The experience-game summary includes its statement; statement guesses resolve to
+the frozen statement text. No transport schema or database migration is required.
+
+Acceptance and coverage:
+
+- `M4GameRulesTests`: each new named-summary game, pre-finish privacy, finalized
+  choices/pass/missing responses, late arrivals, removed-player labels, presenter
+  exclusion, stale submissions, skipped rounds and legacy aggregate-only states;
+  nomination results remain anonymous at finish.
+- `M4GameFunctionalTests`: real HTTP/hub projections before/after finish for all
+  three games, permissions/stale submissions, receipt retry, SQLite restarts
+  before and after finish, removed-player labels and revoked access.
+- `rooms.test.ts`: named choices accept finalized result option values without
+  adding game-specific transport rules; unknown/mismatched values are rejected.
+- `GamePanel.test.tsx`: each game's labels and named summary, statement resolution,
+  passes/missing answers, skipped rounds, legacy fallback and anonymous exceptions.
+- `m4.spec.ts`: all five games finish in real desktop/mobile browsers; new names
+  appear only at finish, skipped rounds stay private, anonymous nominations stay
+  anonymous, statement text is shown, summaries survive reload, accessibility
+  and mobile overflow remain checked.
+
+Implemented and locally verified: all 99 Core tests, 69 API unit/functional tests
+and 146 frontend unit/component tests passed. All 14 desktop/mobile game and M4
+browser cases passed, including API restart recovery. After generalizing result
+choice validation to use each result's option values, the final production build
+passed both five-game desktop/mobile summary cases. That rerun exposed an ordering
+assumption in the new browser assertion; it now checks choices by player name,
+independent of roster order, and both cases passed. Desktop and 360px screenshots
+were visually reviewed; keyboard, accessibility and overflow checks passed.
+Backend/frontend builds, C# formatting, TypeScript, lint, frontend formatting,
+generated-contract verification and diff whitespace checks passed. Browser tests
+used the installed Chromium override recorded above. Hosted CI remains the merge
+gate. Existing aggregate-only historical rounds cannot display individual choices.
+
+### Named choices at round reveal — 2026-10-29
+
+The user clarified that named choices must appear at round reveal to support
+conversation, as well as in the finished summary. Apply this to This or That,
+Would You Rather, Never Have I Ever and Two Truths and a Lie; Most Likely To keeps
+anonymous totals. Remove the finish-only projection gate and the separate named
+reveal setting. Persisted finalized choices now appear during reveal and later
+round history, while responding rounds and skipped input remain private. Earlier
+aggregate-only results still display the unavailable-choices explanation.
+
+Coverage: M4 Core tests check pre-reveal privacy, named reveal to each viewer,
+retained history, frozen eligibility, passes/missing answers, presenter exclusion,
+removals and unchanged finished summaries. M4 API tests cover live reveal via
+HTTP/hub, authorization/stale answers, restart at reveal and finished summaries.
+GamePanel component tests cover all three added named-reveal games at reveal
+and finish. M4 browser flows verify all four games' named reveals on both player
+views, reload and final summaries; nomination totals remain anonymous.
+
+Locally verified: all 99 Core tests, 69 API unit/functional tests and 149
+frontend unit/component tests passed. All four M4 desktop/mobile browser cases
+passed, exercising all five games plus real API restart recovery. Named reveal
+screenshots were visually reviewed on desktop and at 360px; keyboard navigation,
+accessibility, reload persistence and mobile overflow checks passed. Backend and
+frontend builds, C# formatting, TypeScript, lint, frontend formatting and diff
+whitespace checks passed. Browser tests used the installed Chromium override
+recorded above. Gameplay, architecture, product and module guidance now describe
+the same reveal policy. Hosted CI remains the merge gate.
+
+### CI prompt navigation race — 2026-10-29
+
+Hosted run 40851514330 passed builds and all unit/API tests, but its full Nginx
+browser suite failed the desktop filtered-random-draw flow (67 other cases
+passed). The trace shows Prompts clicked before the reveal command completed;
+the confirmed stage change then correctly focused Game and hid the library.
+A held real reveal request reproduced this deterministically on desktop and
+mobile. The test now uses **Choose next prompt**, available only once the
+revealed snapshot is applied, rather than navigating ahead of that transition.
+No application stage-focus behavior or test timeouts are changed.
+
+The push run 40851445023 passed all 68 browser cases but failed the subsequent
+HTTPS browser rehearsal because its start selector still used **Start This or
+That**. Update that script to **Start with random prompt**, with the existing
+setup component tests covering the exact label and the HTTPS rehearsal verifying
+the real start/save/reload/reveal flow.
+
+Acceptance coverage: `GamePanel.test.tsx` checks each prompt game's pending
+reveal leaves next-prompt selection unavailable until its confirmed snapshot,
+then navigates correctly. `prompts.spec.ts` holds the real reveal request, checks
+that boundary, opens the library via the confirmed-stage button, verifies the
+Technology filter survives, and draws an unused prompt through the real API on
+desktop and mobile. Existing full browser and CI suites retain all other checks.
+
+Local verification passed: 153 frontend unit/component tests, TypeScript and
+production build, lint, formatting and script syntax. The controlled original
+navigation reproduced the failure on desktop and mobile; the corrected path
+passed both. All 68 browser cases through Docker/Nginx passed, including database
+and key persistence and credential-free proxy logs. The HTTPS browser check,
+backup/restore, acknowledged-answer SIGKILL recovery, identity/session recovery
+and logout revocation passed using the matching Playwright Chromium installed in
+an isolated temporary cache. The 400-client/20-room/two-round load rehearsal also
+passed with zero duplicate/lost responses and all clients reconnected; latency
+was report-only to match hosted CI. Required push/PR hosted checks rerun after
+publishing this correction and remain the merge gate.

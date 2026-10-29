@@ -50,7 +50,7 @@ describe('game controls', () => {
     const view = render(
       <GamePanel snapshot={snapshot} disabled={false} accept={accept} refresh={refresh} />,
     )
-    expect(screen.getByRole('button', { name: 'Start This or That' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Start with random prompt' })).toBeEnabled()
     view.rerender(
       <GamePanel
         snapshot={{ ...snapshot, youId: snapshot.participants[1].id }}
@@ -59,7 +59,9 @@ describe('game controls', () => {
         refresh={refresh}
       />,
     )
-    expect(screen.queryByRole('button', { name: 'Start This or That' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Start with random prompt' }),
+    ).not.toBeInTheDocument()
     expect(screen.getByText(/Waiting for your facilitator/)).toBeInTheDocument()
   })
   it.each([
@@ -187,7 +189,7 @@ describe('game controls', () => {
     expect(screen.queryByRole('button', { name: 'Tea' })).not.toBeInTheDocument()
   })
   it.each([
-    ['revealed', 'next', 'Next round'],
+    ['revealed', 'next', 'Next random prompt'],
     ['finished', 'lobby', 'Return to lobby'],
   ])('allows the facilitator to continue from %s', async (stage, action, label) => {
     vi.mocked(commandGame).mockResolvedValue({ snapshot, appliedVersion: 2, replayed: false })
@@ -273,31 +275,41 @@ it('keeps the current reveal and advance controls ahead of collapsed history', (
   const current = screen.getByRole('heading', { name: 'Round 2 · Skipped' })
   expect(screen.getByRole('heading', { name: 'Round 1 · Skipped' })).not.toBeVisible()
   expect(
-    screen.getByRole('button', { name: 'Next round' }).compareDocumentPosition(current) &
+    screen.getByRole('button', { name: 'Next random prompt' }).compareDocumentPosition(current) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy()
   const history = screen.getByText('Earlier rounds (1)').closest('details')!
   expect(history).not.toHaveAttribute('open')
 })
 
-it('groups start and prompt browsing as spaced setup actions and preserves navigation', () => {
-  const changeView = vi.fn()
-  render(
-    <GamePanel
-      snapshot={snapshot}
-      disabled={false}
-      accept={accept}
-      refresh={refresh}
-      onViewChange={changeView}
-      view="room"
-    />,
-  )
-  const actions = screen.getByRole('group', { name: 'Game setup' })
-  expect(actions).toHaveClass('room-buttons')
-  expect(within(actions).getByRole('button', { name: 'Start This or That' })).toBeEnabled()
-  fireEvent.click(within(actions).getByRole('button', { name: 'Browse prompts' }))
-  expect(changeView).toHaveBeenCalledWith('prompts')
-})
+it.each(['this-or-that', 'would-you-rather', 'never-have-i-ever', 'most-likely-to'])(
+  'offers matching setup buttons and prompt navigation for %s',
+  (gameId) => {
+    const changeView = vi.fn()
+    render(
+      <GamePanel
+        snapshot={snapshot}
+        disabled={false}
+        accept={accept}
+        refresh={refresh}
+        onViewChange={changeView}
+        view="room"
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Choose a game'), { target: { value: gameId } })
+    const actions = screen.getByRole('group', { name: 'Game setup' })
+    expect(actions).toHaveClass('room-buttons')
+    expect(within(actions).getByRole('button', { name: 'Start with random prompt' })).toHaveClass(
+      'button',
+    )
+    const browse = within(actions).getByRole('button', { name: 'Choose first prompt' })
+    expect(browse).toHaveClass('button', 'secondary-button')
+    expect(browse).not.toHaveClass('text-button')
+    fireEvent.click(browse)
+    expect(changeView).toHaveBeenCalledWith('prompts')
+    expect(commandGame).not.toHaveBeenCalled()
+  },
+)
 
 it.each(['would-you-rather', 'never-have-i-ever', 'most-likely-to', 'two-truths-and-a-lie'])(
   'lets the facilitator choose and start %s',
@@ -378,3 +390,236 @@ it('gives collecting players their own form without an empty facilitator control
   expect(screen.getByRole('button', { name: 'Save statements' })).toBeEnabled()
   expect(screen.queryByRole('group', { name: 'Facilitator controls' })).not.toBeInTheDocument()
 })
+
+it.each(['this-or-that', 'would-you-rather', 'never-have-i-ever', 'most-likely-to'])(
+  'groups random advance and prompt selection above results for %s, including exhausted pools',
+  (gameId) => {
+    const changeView = vi.fn()
+    const props = {
+      snapshot: {
+        ...snapshot,
+        game: { ...game, gameId, stage: 'revealed', allowedActions: ['next', 'finish'] },
+      },
+      disabled: false,
+      accept,
+      refresh,
+      view: 'game' as const,
+      onViewChange: changeView,
+    }
+    const panel = render(<GamePanel {...props} />)
+    const actions = screen.getByRole('group', { name: 'Next round' })
+    expect(within(actions).getByRole('button', { name: 'Next random prompt' })).toBeEnabled()
+    const choose = within(actions).getByRole('button', { name: 'Choose next prompt' })
+    expect(
+      actions.compareDocumentPosition(screen.getByLabelText('Round results')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    fireEvent.click(choose)
+    expect(changeView).toHaveBeenCalledWith('prompts')
+    expect(commandGame).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Choose first prompt' })).not.toBeInTheDocument()
+    panel.rerender(
+      <GamePanel
+        {...props}
+        snapshot={{
+          ...props.snapshot,
+          game: {
+            ...props.snapshot.game,
+            allowedActions: ['reset', 'finish'],
+            remainingPrompts: 0,
+          },
+        }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Next random prompt' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Choose next prompt' })).toBeEnabled()
+  },
+)
+
+it('keeps presenter turns and participant views free of prompt selection controls', () => {
+  const props = {
+    snapshot: {
+      ...snapshot,
+      game: {
+        ...game,
+        gameId: 'two-truths-and-a-lie',
+        stage: 'revealed',
+        allowedActions: ['next', 'finish'],
+      },
+    },
+    disabled: false,
+    accept,
+    refresh,
+    view: 'game' as const,
+    onViewChange: vi.fn(),
+  }
+  const panel = render(<GamePanel {...props} />)
+  expect(screen.getByRole('button', { name: 'Next round' })).toBeEnabled()
+  expect(screen.queryByRole('button', { name: 'Choose next prompt' })).not.toBeInTheDocument()
+  panel.rerender(
+    <GamePanel
+      {...props}
+      snapshot={{
+        ...props.snapshot,
+        youId: snapshot.participants[1].id,
+        game: { ...game, stage: 'revealed', allowedActions: [] },
+      }}
+    />,
+  )
+  expect(screen.queryByRole('button', { name: 'Choose next prompt' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Next random prompt' })).not.toBeInTheDocument()
+})
+
+it('omits setup prompt browsing for player-written statements and participants', () => {
+  const props = {
+    snapshot,
+    disabled: false,
+    accept,
+    refresh,
+    onViewChange: vi.fn(),
+    view: 'room' as const,
+  }
+  const panel = render(<GamePanel {...props} />)
+  fireEvent.change(screen.getByLabelText('Choose a game'), {
+    target: { value: 'two-truths-and-a-lie' },
+  })
+  expect(screen.queryByRole('button', { name: 'Choose first prompt' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Start Two Truths and a Lie' })).toBeEnabled()
+  panel.rerender(
+    <GamePanel {...props} snapshot={{ ...snapshot, youId: snapshot.participants[1].id }} />,
+  )
+  expect(screen.queryByRole('group', { name: 'Game setup' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Choose first prompt' })).not.toBeInTheDocument()
+})
+
+it.each(
+  ['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie'].flatMap((gameId) =>
+    ['revealed', 'finished'].map((stage) => ({ gameId, stage })),
+  ),
+)(
+  'renders finalized named choices, passes and missing answers for $gameId at $stage',
+  ({ gameId, stage }) => {
+    const statements = gameId === 'two-truths-and-a-lie'
+    const experience = gameId === 'never-have-i-ever'
+    const result = {
+      roundId: game.roundId,
+      number: 1,
+      prompt: experience ? 'Never have I ever made bread' : game.prompt,
+      optionA: experience ? 'I have' : 'Tea',
+      optionB: experience ? "I haven't" : 'Coffee',
+      skipped: false,
+      a: 0,
+      b: 1,
+      passes: 1,
+      missing: 1,
+      percentA: 0,
+      percentB: 100,
+      choices: [
+        { participantId: snapshot.youId, name: 'Host', choice: statements ? '2' : 'b' },
+        { participantId: snapshot.participants[1].id, name: 'Player', choice: 'pass' },
+        { participantId: 'missing', name: 'Missing', choice: 'missing' },
+      ],
+      ...(statements
+        ? {
+            presenterName: 'Presenter',
+            lieIndex: 1,
+            totals: [
+              { value: '1', label: 'I juggle', count: 0, percent: 0, winner: false },
+              { value: '2', label: 'I fly', count: 1, percent: 100, winner: false },
+              { value: '3', label: 'I paint', count: 0, percent: 0, winner: false },
+            ],
+          }
+        : {}),
+    }
+    show({
+      gameId,
+      stage,
+      allowedActions: stage === 'finished' ? ['lobby'] : ['next', 'finish'],
+      results:
+        stage === 'revealed'
+          ? [result]
+          : [result, { ...result, roundId: 'skipped', number: 2, skipped: true, choices: [] }],
+    })
+    const choices = screen.getByRole('list', { name: 'Player choices for round 1' })
+    expect(choices).toHaveTextContent(`Host${statements ? 'I fly' : result.optionB}`)
+    expect(choices).toHaveTextContent('PlayerPassed')
+    expect(choices).toHaveTextContent('MissingNo answer')
+    if (experience)
+      expect(within(choices.closest('article')!).getByText(result.prompt)).toBeVisible()
+    expect(
+      screen.queryByRole('list', { name: 'Player choices for round 2' }),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie', 'most-likely-to'])(
+  'handles an older aggregate-only %s summary without inventing votes',
+  (gameId) => {
+    show({
+      gameId,
+      stage: 'finished',
+      allowedActions: ['lobby'],
+      results: [
+        {
+          roundId: game.roundId,
+          number: 1,
+          prompt: game.prompt,
+          optionA: 'Tea',
+          optionB: 'Coffee',
+          skipped: false,
+          a: 0,
+          b: 0,
+          passes: 0,
+          missing: 2,
+          percentA: 0,
+          percentB: 0,
+          choices: [],
+        },
+      ],
+    })
+    expect(
+      screen.queryByRole('list', { name: 'Player choices for round 1' }),
+    ).not.toBeInTheDocument()
+    const unavailable = screen.queryByText(
+      'Individual choices are unavailable for this earlier round',
+    )
+    if (gameId === 'most-likely-to') expect(unavailable).not.toBeInTheDocument()
+    else expect(unavailable).toBeVisible()
+  },
+)
+
+it.each(['this-or-that', 'would-you-rather', 'never-have-i-ever', 'most-likely-to'])(
+  'offers next-prompt navigation only after the confirmed reveal snapshot for %s',
+  async (gameId) => {
+    let confirmReveal!: (result: Awaited<ReturnType<typeof commandGame>>) => void
+    vi.mocked(commandGame).mockReturnValue(
+      new Promise((resolve) => {
+        confirmReveal = resolve
+      }),
+    )
+    const changeView = vi.fn()
+    const responding = { ...snapshot, game: { ...game, gameId } }
+    const props = {
+      snapshot: responding,
+      disabled: false,
+      accept,
+      refresh,
+      view: 'game' as const,
+      onViewChange: changeView,
+    }
+    const panel = render(<GamePanel {...props} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal answers' }))
+    expect(screen.queryByRole('button', { name: 'Choose next prompt' })).not.toBeInTheDocument()
+    expect(changeView).not.toHaveBeenCalled()
+    const revealed = {
+      ...responding,
+      version: snapshot.version + 1,
+      game: { ...responding.game, stage: 'revealed', allowedActions: ['next', 'finish'] },
+    }
+    confirmReveal({ snapshot: revealed, appliedVersion: revealed.version, replayed: false })
+    await waitFor(() => expect(accept).toHaveBeenCalledWith(revealed))
+    panel.rerender(<GamePanel {...props} snapshot={revealed} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Choose next prompt' }))
+    expect(changeView).toHaveBeenCalledExactlyOnceWith('prompts')
+  },
+)

@@ -44,7 +44,7 @@ try {
   await page.getByRole("button", { name: "Create room" }).click();
   await expect(page.getByText("Connected", { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: "Start This or That", exact: true })
+    .getByRole("button", { name: "Start with random prompt", exact: true })
     .click();
   await page
     .getByRole("group", { name: "Your choice" })

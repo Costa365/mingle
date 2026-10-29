@@ -141,7 +141,8 @@ function parseGame(g: Contract.GameView) {
                 typeof c.name === 'string' &&
                 c.name.length > 0 &&
                 c.name.length <= 32 &&
-                ['a', 'b', 'pass', 'missing'].includes(c.choice),
+                (['a', 'b', 'pass', 'missing'].includes(c.choice) ||
+                  (Array.isArray(r.totals) && r.totals.some((total) => total?.value === c.choice))),
             ))),
     )
   )
