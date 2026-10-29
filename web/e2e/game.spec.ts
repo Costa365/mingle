@@ -38,7 +38,7 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     await join(two, room.code, 'Two')
     await expect(page.getByText('Two', { exact: true })).toBeVisible()
     // Deliberately include 'one' in an answer: player identities must match their own label.
-    await page.getByRole('button', { name: 'Browse prompts' }).click()
+    await page.getByRole('button', { name: 'Choose first prompt' }).click()
     const prompt = page
       .getByRole('list', { name: 'Available prompts' })
       .getByRole('listitem')
@@ -78,17 +78,17 @@ test('three people choose, pass, change, reveal, skip and finish with private li
     await expect(
       choices.getByRole('listitem').filter({ has: one.locator('strong', { hasText: /^Two$/ }) }),
     ).toContainText(game.optionB)
-    await expect(one.getByRole('button', { name: 'Next round' })).toHaveCount(0)
-    await page.getByRole('button', { name: 'Next round' }).click()
+    await expect(one.getByRole('button', { name: 'Next random prompt' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Next random prompt' }).click()
     await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
     await page.getByRole('button', { name: 'Skip round' }).click()
     await expect(one.getByRole('heading', { name: 'Round 2 · Skipped' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Round 1', exact: true })).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Next round' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Next random prompt' })).toBeInViewport()
     await page.getByText('Earlier rounds (1)', { exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Round 1', exact: true })).toBeVisible()
     await page.getByText('Earlier rounds (1)', { exact: true }).click()
-    await page.getByRole('button', { name: 'Next round' }).click()
+    await page.getByRole('button', { name: 'Next random prompt' }).click()
     await twoContext.close() // A disconnected eligible participant must not block reveal.
     await page.getByRole('button', { name: 'Reveal answers' }).click()
     await expect(page.getByText('0 passed · 3 unanswered')).toBeVisible()
@@ -101,7 +101,7 @@ test('three people choose, pass, change, reveal, skip and finish with private li
       fullPage: true,
     })
     await page.getByRole('button', { name: 'Return to lobby' }).click()
-    await expect(page.getByRole('button', { name: 'Start This or That' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start with random prompt' })).toBeVisible()
     await expect(one.getByText('Waiting for your facilitator to start a game')).toBeVisible()
   } finally {
     await oneContext.close()
@@ -118,14 +118,14 @@ test('late arrival waits, then plays next round and survives real API restart', 
   const context = await browser.newContext({ baseURL, viewport: page.viewportSize() })
   try {
     const room = await host(page)
-    await page.getByRole('button', { name: 'Start This or That' }).click()
+    await page.getByRole('button', { name: 'Start with random prompt' }).click()
     await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
     const late = await context.newPage()
     await join(late, room.code, 'Late')
     await expect(late.getByText(/You joined during this round/)).toBeVisible()
     await expect(late.getByRole('button', { name: 'Pass this round' })).toBeDisabled()
     await page.getByRole('button', { name: 'Reveal answers' }).click()
-    await page.getByRole('button', { name: 'Next round' }).click()
+    await page.getByRole('button', { name: 'Next random prompt' }).click()
     await expect(late.getByRole('button', { name: 'Pass this round' })).toBeEnabled()
     await late.getByRole('button', { name: 'Pass this round' }).click()
     await expect(late.getByRole('button', { name: 'Pass this round' })).toHaveAttribute(
@@ -156,7 +156,7 @@ test('an ambiguous game acknowledgement retries the same command without advanci
   page,
 }) => {
   const room = await host(page)
-  await page.getByRole('button', { name: 'Start This or That' }).click()
+  await page.getByRole('button', { name: 'Start with random prompt' }).click()
   await expect(page.getByRole('button', { name: 'Reveal answers' })).toBeVisible()
   const commands: unknown[] = []
   let first = true
@@ -254,6 +254,86 @@ test('remote starts focus Game, named responses stay private and room navigation
       path: `test-results/focused-game-${test.info().project.name}.png`,
       fullPage: true,
     })
+  } finally {
+    await context.close()
+  }
+})
+
+test('facilitators can choose the next prompt beside random advance in every prompt game', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  test.setTimeout(120_000)
+  const context = await browser.newContext({ baseURL, viewport: page.viewportSize() })
+  try {
+    const room = await host(page)
+    const player = await context.newPage()
+    await join(player, room.code, 'Player')
+    for (const gameId of [
+      'this-or-that',
+      'would-you-rather',
+      'never-have-i-ever',
+      'most-likely-to',
+    ]) {
+      await page.getByLabel('Choose a game').selectOption(gameId)
+      await page.getByRole('button', { name: /^Start / }).click()
+      await page.getByRole('button', { name: 'Reveal answers' }).click()
+      const actions = page.getByRole('group', { name: 'Next round', exact: true })
+      const random = actions.getByRole('button', { name: 'Next random prompt', exact: true })
+      const choose = actions.getByRole('button', { name: 'Choose next prompt', exact: true })
+      await expect(random).toBeInViewport()
+      await expect(choose).toBeInViewport()
+      await expect(player.getByRole('button', { name: 'Choose next prompt' })).toHaveCount(0)
+      await expect(player.getByRole('button', { name: 'Next random prompt' })).toHaveCount(0)
+      const randomBox = (await random.boundingBox())!
+      const chooseBox = (await choose.boundingBox())!
+      expect(chooseBox.height).toBeGreaterThanOrEqual(44)
+      if (test.info().project.name === 'mobile') {
+        expect(chooseBox.y).toBeGreaterThanOrEqual(randomBox.y + randomBox.height)
+        expect(chooseBox.x).toBe(randomBox.x)
+      } else {
+        expect(chooseBox.y).toBe(randomBox.y)
+        expect(chooseBox.x).toBeGreaterThan(randomBox.x + randomBox.width)
+      }
+      await random.focus()
+      await page.keyboard.press('Tab')
+      await expect(choose).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeFocused()
+      await expect(page.getByRole('combobox', { name: 'Game', exact: true })).toHaveValue(gameId)
+      await page.getByRole('button', { name: 'Back to results', exact: true }).click()
+      expect((await snapshot(page, room.id)).game!.roundNumber).toBe(1)
+      await choose.click()
+      const row = page
+        .getByRole('list', { name: 'Available prompts' })
+        .getByRole('listitem')
+        .filter({ has: page.locator('button:enabled', { hasText: 'Use this prompt' }) })
+        .first()
+      const selected = await row.locator('strong').innerText()
+      await row.getByRole('button', { name: 'Use this prompt', exact: true }).click()
+      await expect(page.getByText('Round 2 · Make your choice')).toBeVisible()
+      await expect(player.getByText('Round 2 · Make your choice')).toBeVisible()
+      const next = (await snapshot(page, room.id)).game!
+      expect(
+        ['this-or-that', 'would-you-rather'].includes(gameId)
+          ? `${next.optionA} / ${next.optionB}`
+          : next.prompt,
+      ).toBe(selected)
+      await page.getByRole('button', { name: 'Reveal answers' }).click()
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+      await page.screenshot({
+        path: `test-results/next-prompt-${gameId}-${test.info().project.name}.png`,
+        fullPage: true,
+      })
+      await random.click()
+      await expect(page.getByText('Round 3 · Make your choice')).toBeVisible()
+      await page.getByRole('button', { name: 'Finish game', exact: true }).click()
+      await page.getByRole('button', { name: 'Return to lobby', exact: true }).click()
+    }
   } finally {
     await context.close()
   }

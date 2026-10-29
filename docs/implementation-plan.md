@@ -700,3 +700,78 @@ Confirm the CDN/hosting environment when preparing production configuration; use
 documented proxy defaults locally. Tune retention/capacity from product feedback
 and measured load. Choose final brand assets during UI work. The defaults in
 [product.md](product.md) permit implementation to begin without these answers.
+
+### Next-round prompt discovery — 2026-10-29
+
+Implement the user's selected option 1: after reveal in all four prompt-based
+games, group primary **Next random round** and secondary **Choose next prompt**
+above results. Stack the pair on mobile, retain existing library selection and
+server commands, and offer **Back to results** without advancing. Preserve
+**Next round** for Two Truths and a Lie presenter turns and facilitator-only
+visibility. Exhausted pools still offer prompt selection alongside reset.
+
+Acceptance coverage:
+
+- `GamePanel.test.tsx`: grouped controls and navigation for each prompt game,
+  exhausted-pool selection, existing random command dispatch, participant exclusion
+  and presenter-turn labels.
+- `game.spec.ts`: real API/browser flow for every prompt game on desktop and
+  360px mobile; adjacent/stacked geometry, keyboard focus/order, return without
+  advancing, selected prompt publication to a second player, random advance,
+  participant exclusion, accessibility and overflow. Existing game, M4 and
+  resilience selectors follow the clarified random label.
+
+Implemented and locally verified: all 134 frontend unit/component tests passed;
+16 existing desktop/mobile game, M4 and resilience browser cases passed. Both new
+browser cases passed after correcting their assertion to compare statement text
+for Never Have I Ever and Most Likely To, rather than fixed response labels.
+The new cases each exercise all four prompt games. Desktop and 360px mobile
+screenshots were visually reviewed; keyboard order, accessibility and overflow
+checks passed. Backend build, frontend TypeScript/production build, lint,
+formatting and diff whitespace checks passed. Browser tests used the installed
+Chromium via `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` because the current Playwright
+package's default browser binary was unavailable. Required hosted CI remains the
+merge gate; no milestone status changed.
+
+
+### Matching game setup buttons — 2026-10-29
+
+Use the same secondary button styling for **Browse prompts** beside the start
+button before a prompt-based game begins, with equal-height adjacent buttons on
+desktop and full-width stacked buttons on mobile. Keep the existing navigation
+and labels. Two Truths and a Lie and participant setup do not offer prompt browsing.
+
+Acceptance coverage: `GamePanel.test.tsx` checks all four prompt-game setup
+buttons, navigation without a game command, participant exclusion and the
+player-written game exception. The `rooms.spec.ts` game setup browser case
+exercises all four games with the real API, keyboard navigation, responsive
+geometry, accessibility and starting a game on desktop and 360px mobile.
+Locally verified: all 138 frontend unit/component tests and four targeted browser
+cases passed (setup and in-game prompt selection on desktop and 360px mobile).
+These browser cases exercise all four prompt games. Setup screenshots were
+visually reviewed on both viewports; keyboard, accessibility, geometry and
+overflow checks passed. Frontend TypeScript/production build, lint, formatting
+and diff whitespace checks passed. Browser tests used the installed Chromium
+with the same environment override recorded above. Hosted CI remains the merge gate.
+
+
+### Consistent random and selected prompt labels — 2026-10-29
+
+Setup now uses **Start with random prompt** and **Choose first prompt**; reveal
+uses **Next random prompt** and **Choose next prompt**. This names the random
+behavior explicitly and distinguishes choosing the first prompt from later ones.
+Two Truths and a Lie retains its game start and presenter-turn wording; browsing
+during an active responding round keeps **Browse prompts**.
+
+Acceptance: GamePanel component tests and desktop/mobile setup and in-game
+browser flows verify the exact labels, navigation, random and selected start/next
+commands, participant exclusions and the statement-game exception. Existing
+browser selectors are updated for the new setup label.
+
+Locally verified: 138 frontend unit/component tests and all four targeted
+browser cases passed, covering setup and next-round controls for all four prompt
+games on desktop and 360px mobile. Screenshots confirm the longer setup label
+fits on both viewports. Keyboard navigation, accessibility, button geometry and
+overflow checks passed, as did TypeScript/production build, lint, formatting and
+diff whitespace checks. Browser execution used the installed Chromium override
+recorded above. Hosted CI remains the merge gate.

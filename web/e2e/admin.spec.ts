@@ -41,7 +41,7 @@ test('administrator manages another browser room and connected players see force
     await player.getByRole('button', { name: 'Join room', exact: true }).click()
     await expect(host.getByText('Player', { exact: true })).toBeVisible()
     await host.getByRole('button', { name: /^Game/ }).click()
-    await host.getByRole('button', { name: 'Start This or That', exact: true }).click()
+    await host.getByRole('button', { name: 'Start with random prompt', exact: true }).click()
     await expect(player.getByRole('group', { name: 'Your choice' })).toBeVisible()
     await page.goto('/admin')
     await page.getByLabel('Administrator credential').fill('wrong')
@@ -104,7 +104,7 @@ test('shared prompt authoring, pagination, safe retries and audit work across re
     const host = await context.newPage()
     await create(host)
     await host.getByRole('button', { name: /^Game/ }).click()
-    await host.getByRole('button', { name: 'Browse prompts', exact: true }).click()
+    await host.getByRole('button', { name: 'Choose first prompt', exact: true }).click()
     const shared = host
       .getByRole('list', { name: 'Available prompts' })
       .getByRole('listitem')

@@ -221,12 +221,15 @@ boundary. Keep planned capabilities clearly distinct from implemented behavior.
 
 ## Trying M2
 
-Host a room and choose **Start This or That**. Use separate browser profiles or
+Host a room and choose **Start with random prompt**. Use separate browser profiles or
 regular/incognito contexts for independent players (incognito windows share a
 session with each other). Choose an option or pass; change it until reveal. After reveal, each player’s name and choice are shown
 alongside vote totals so the team can talk about their answers. The facilitator can reveal, skip, start the next round, or finish without waiting.
 Return to the lobby to start a fresh session. New arrivals watch the current
-round and become eligible at the next one. Facilitators can open **Browse prompts** to search, filter by category/tag,
+round and become eligible at the next one. After reveal, **Next random prompt** draws immediately, while the adjacent
+**Choose next prompt** opens the library to select a specific prompt. **Back to results**
+returns without starting a round. **Choose first prompt** opens the library before
+starting; **Browse prompts** remains available while answering to search, filter by category/tag,
 select a pair, or draw randomly. Used prompts are excluded until an explicit pool
 reset. **Add room prompt** creates private room content; edit/delete operations
 keep already-started rounds unchanged. Other game libraries can be prepared now;

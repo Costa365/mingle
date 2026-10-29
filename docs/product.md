@@ -133,6 +133,9 @@ answer/presence updates and same-stage reconnects preserve deliberate navigation
 Opening an existing active game defaults to Game. Room and Prompts show the current
 game and a return action, and prompt filters/drafts survive navigation.
 
+Game setup pairs **Start with random prompt** with a secondary **Choose first prompt**
+button for prompt-based games. The pair stacks at mobile widths.
+
 In Game, prioritize the prompt and two answer choices. Use shorter choice controls
 (80px minimum on desktop, 64px on mobile, growing for long text); show Pass this
 round as a secondary text button with a 44px minimum touch target. Do not add
@@ -140,7 +143,11 @@ redundant pass reassurance beside it. Show saved-answer/pass feedback. A named
 Answered/Waiting list includes all eligible players; passing counts as Answered
 without identifying it before reveal. Mark away players and distinguish late
 arrivals who can participate next round. Reveal remains possible with missing
-responses. Current results and advance controls lead; earlier results are available
+responses. After reveal, facilitators see **Next random prompt** and **Choose next prompt**
+together above the results for prompt-based games, stacked on mobile. Choosing a
+prompt opens the existing library; **Back to results** returns without advancing.
+Two Truths and a Lie retains **Next round** for presenter turns.
+Current results and advance controls lead; earlier results are available
 in a collapsed history. On desktop, place response progress alongside gameplay;
 on mobile, place it after answer controls.
 

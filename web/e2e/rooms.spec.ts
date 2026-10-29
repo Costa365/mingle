@@ -261,14 +261,14 @@ test('Room keeps team and invitations at the top while Game and Prompts have ded
   await page.keyboard.press('Tab')
   await expect(page.getByLabel('Choose a game')).toBeFocused()
   await page.keyboard.press('Tab')
-  await expect(page.getByRole('button', { name: 'Start This or That' })).toBeFocused()
-  await page.getByRole('button', { name: 'Browse prompts' }).click()
+  await expect(page.getByRole('button', { name: 'Start with random prompt' })).toBeFocused()
+  await page.getByRole('button', { name: 'Choose first prompt' }).click()
   await expect(page.getByText('200 prompts · 200 unused and enabled')).toBeVisible()
   await expect(team).toBeHidden()
   await expect(invite).toBeHidden()
   await page.getByRole('button', { name: /^Room \(/ }).click()
   await expectPanelsFirst()
-  await page.getByRole('button', { name: 'Start This or That' }).click()
+  await page.getByRole('button', { name: 'Start with random prompt' }).click()
   await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
   await expect(team).toBeHidden()
   await page.getByRole('button', { name: /^Room \(/ }).click()
@@ -282,20 +282,48 @@ test('Room keeps team and invitations at the top while Game and Prompts have ded
   })
 })
 
-test('game setup separates start and prompt browsing with a responsive gap', async ({ page }) => {
+test('game setup offers matching start and browse buttons with a responsive gap', async ({
+  page,
+}) => {
   await host(page)
   const actions = page.getByRole('group', { name: 'Game setup' })
-  const start = actions.getByRole('button', { name: 'Start This or That' })
-  const browse = actions.getByRole('button', { name: 'Browse prompts' })
-  const startBox = (await start.boundingBox())!
-  const browseBox = (await browse.boundingBox())!
-  if (Math.abs(startBox.y - browseBox.y) < startBox.height)
-    expect(browseBox.x - startBox.x - startBox.width).toBeGreaterThanOrEqual(16)
-  else expect(browseBox.y - startBox.y - startBox.height).toBeGreaterThanOrEqual(16)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await browse.click()
-  await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeVisible()
-  await page.getByRole('button', { name: 'Game', exact: true }).click()
-  await start.click()
+  for (const gameId of [
+    'this-or-that',
+    'would-you-rather',
+    'never-have-i-ever',
+    'most-likely-to',
+  ]) {
+    await page.getByLabel('Choose a game').selectOption(gameId)
+    const start = actions.getByRole('button', { name: 'Start with random prompt', exact: true })
+    const browse = actions.getByRole('button', { name: 'Choose first prompt' })
+    await expect(browse).toHaveClass(/secondary-button/)
+    const startBox = (await start.boundingBox())!
+    const browseBox = (await browse.boundingBox())!
+    expect(browseBox.height).toBe(startBox.height)
+    expect(browseBox.height).toBeGreaterThanOrEqual(44)
+    if (test.info().project.name === 'mobile') {
+      expect(browseBox.y - startBox.y - startBox.height).toBeGreaterThanOrEqual(16)
+      expect(browseBox.width).toBe(startBox.width)
+      expect(browseBox.x).toBe(startBox.x)
+    } else {
+      expect(browseBox.y).toBe(startBox.y)
+      expect(browseBox.x - startBox.x - startBox.width).toBeGreaterThanOrEqual(16)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await start.focus()
+    await page.keyboard.press('Tab')
+    await expect(browse).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('heading', { name: 'Your prompt library' })).toBeFocused()
+    await page.getByRole('button', { name: 'Game', exact: true }).click()
+  }
+  await page.getByLabel('Choose a game').selectOption('two-truths-and-a-lie')
+  await expect(actions.getByRole('button', { name: 'Choose first prompt' })).toHaveCount(0)
+  await page.getByLabel('Choose a game').selectOption('this-or-that')
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await actions.screenshot({
+    path: `test-results/game-setup-buttons-${test.info().project.name}.png`,
+  })
+  await actions.getByRole('button', { name: 'Start with random prompt' }).click()
   await expect(page.getByRole('group', { name: 'Your choice' })).toBeVisible()
 })

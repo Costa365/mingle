@@ -84,7 +84,7 @@ test('all five games complete in one room with private binary answers and anonym
       } else if (id !== 'this-or-that')
         await expect(player.getByRole('list', { name: /Player choices/ })).toHaveCount(0)
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      await page.getByRole('button', { name: 'Next round', exact: true }).click()
+      await page.getByRole('button', { name: 'Next random prompt', exact: true }).click()
       await page.getByRole('button', { name: 'Skip round', exact: true }).click()
       await page.getByRole('button', { name: 'Finish game', exact: true }).click()
       await page.getByRole('button', { name: 'Return to lobby', exact: true }).click()

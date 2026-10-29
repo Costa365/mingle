@@ -42,7 +42,7 @@ test('facilitator browses launch content, filters and manually selects a built-i
     await player.getByLabel('Your name').fill('Player')
     await player.getByRole('button', { name: 'Join room' }).click()
     await expect(player.getByText('Connected', { exact: true })).toBeVisible()
-    await expect(player.getByRole('button', { name: 'Browse prompts' })).toHaveCount(0)
+    await expect(player.getByRole('button', { name: 'Choose first prompt' })).toHaveCount(0)
     await page.route(`**/api/rooms/${id}/prompts`, (route) => route.abort(), { times: 1 })
     await page.getByRole('button', { name: 'Prompts', exact: true }).click()
     await expect(page.getByRole('alert')).toHaveText(/could not be loaded/)
