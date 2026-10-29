@@ -846,3 +846,39 @@ frontend builds, C# formatting, TypeScript, lint, frontend formatting and diff
 whitespace checks passed. Browser tests used the installed Chromium override
 recorded above. Gameplay, architecture, product and module guidance now describe
 the same reveal policy. Hosted CI remains the merge gate.
+
+### CI prompt navigation race — 2026-10-29
+
+Hosted run 40851514330 passed builds and all unit/API tests, but its full Nginx
+browser suite failed the desktop filtered-random-draw flow (67 other cases
+passed). The trace shows Prompts clicked before the reveal command completed;
+the confirmed stage change then correctly focused Game and hid the library.
+A held real reveal request reproduced this deterministically on desktop and
+mobile. The test now uses **Choose next prompt**, available only once the
+revealed snapshot is applied, rather than navigating ahead of that transition.
+No application stage-focus behavior or test timeouts are changed.
+
+The push run 40851445023 passed all 68 browser cases but failed the subsequent
+HTTPS browser rehearsal because its start selector still used **Start This or
+That**. Update that script to **Start with random prompt**, with the existing
+setup component tests covering the exact label and the HTTPS rehearsal verifying
+the real start/save/reload/reveal flow.
+
+Acceptance coverage: `GamePanel.test.tsx` checks each prompt game's pending
+reveal leaves next-prompt selection unavailable until its confirmed snapshot,
+then navigates correctly. `prompts.spec.ts` holds the real reveal request, checks
+that boundary, opens the library via the confirmed-stage button, verifies the
+Technology filter survives, and draws an unused prompt through the real API on
+desktop and mobile. Existing full browser and CI suites retain all other checks.
+
+Local verification passed: 153 frontend unit/component tests, TypeScript and
+production build, lint, formatting and script syntax. The controlled original
+navigation reproduced the failure on desktop and mobile; the corrected path
+passed both. All 68 browser cases through Docker/Nginx passed, including database
+and key persistence and credential-free proxy logs. The HTTPS browser check,
+backup/restore, acknowledged-answer SIGKILL recovery, identity/session recovery
+and logout revocation passed using the matching Playwright Chromium installed in
+an isolated temporary cache. The 400-client/20-room/two-round load rehearsal also
+passed with zero duplicate/lost responses and all clients reconnected; latency
+was report-only to match hosted CI. Required push/PR hosted checks rerun after
+publishing this correction and remain the merge gate.

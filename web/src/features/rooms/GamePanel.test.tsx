@@ -587,3 +587,39 @@ it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie', 'most-
     else expect(unavailable).toBeVisible()
   },
 )
+
+it.each(['this-or-that', 'would-you-rather', 'never-have-i-ever', 'most-likely-to'])(
+  'offers next-prompt navigation only after the confirmed reveal snapshot for %s',
+  async (gameId) => {
+    let confirmReveal!: (result: Awaited<ReturnType<typeof commandGame>>) => void
+    vi.mocked(commandGame).mockReturnValue(
+      new Promise((resolve) => {
+        confirmReveal = resolve
+      }),
+    )
+    const changeView = vi.fn()
+    const responding = { ...snapshot, game: { ...game, gameId } }
+    const props = {
+      snapshot: responding,
+      disabled: false,
+      accept,
+      refresh,
+      view: 'game' as const,
+      onViewChange: changeView,
+    }
+    const panel = render(<GamePanel {...props} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal answers' }))
+    expect(screen.queryByRole('button', { name: 'Choose next prompt' })).not.toBeInTheDocument()
+    expect(changeView).not.toHaveBeenCalled()
+    const revealed = {
+      ...responding,
+      version: snapshot.version + 1,
+      game: { ...responding.game, stage: 'revealed', allowedActions: ['next', 'finish'] },
+    }
+    confirmReveal({ snapshot: revealed, appliedVersion: revealed.version, replayed: false })
+    await waitFor(() => expect(accept).toHaveBeenCalledWith(revealed))
+    panel.rerender(<GamePanel {...props} snapshot={revealed} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Choose next prompt' }))
+    expect(changeView).toHaveBeenCalledExactlyOnceWith('prompts')
+  },
+)
