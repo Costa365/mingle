@@ -491,3 +491,92 @@ it('omits setup prompt browsing for player-written statements and participants',
   expect(screen.queryByRole('group', { name: 'Game setup' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Choose first prompt' })).not.toBeInTheDocument()
 })
+
+it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie'])(
+  'renders finalized named choices, passes and missing answers in the %s summary',
+  (gameId) => {
+    const statements = gameId === 'two-truths-and-a-lie'
+    const experience = gameId === 'never-have-i-ever'
+    const result = {
+      roundId: game.roundId,
+      number: 1,
+      prompt: experience ? 'Never have I ever made bread' : game.prompt,
+      optionA: experience ? 'I have' : 'Tea',
+      optionB: experience ? "I haven't" : 'Coffee',
+      skipped: false,
+      a: 0,
+      b: 1,
+      passes: 1,
+      missing: 1,
+      percentA: 0,
+      percentB: 100,
+      choices: [
+        { participantId: snapshot.youId, name: 'Host', choice: statements ? '2' : 'b' },
+        { participantId: snapshot.participants[1].id, name: 'Player', choice: 'pass' },
+        { participantId: 'missing', name: 'Missing', choice: 'missing' },
+      ],
+      ...(statements
+        ? {
+            presenterName: 'Presenter',
+            lieIndex: 1,
+            totals: [
+              { value: '1', label: 'I juggle', count: 0, percent: 0, winner: false },
+              { value: '2', label: 'I fly', count: 1, percent: 100, winner: false },
+              { value: '3', label: 'I paint', count: 0, percent: 0, winner: false },
+            ],
+          }
+        : {}),
+    }
+    show({
+      gameId,
+      stage: 'finished',
+      allowedActions: ['lobby'],
+      results: [result, { ...result, roundId: 'skipped', number: 2, skipped: true, choices: [] }],
+    })
+    const choices = screen.getByRole('list', { name: 'Player choices for round 1' })
+    expect(choices).toHaveTextContent(`Host${statements ? 'I fly' : result.optionB}`)
+    expect(choices).toHaveTextContent('PlayerPassed')
+    expect(choices).toHaveTextContent('MissingNo answer')
+    if (experience)
+      expect(within(choices.closest('article')!).getByText(result.prompt)).toBeVisible()
+    expect(
+      screen.queryByRole('list', { name: 'Player choices for round 2' }),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it.each(['would-you-rather', 'never-have-i-ever', 'two-truths-and-a-lie', 'most-likely-to'])(
+  'handles an older aggregate-only %s summary without inventing votes',
+  (gameId) => {
+    show({
+      gameId,
+      stage: 'finished',
+      allowedActions: ['lobby'],
+      results: [
+        {
+          roundId: game.roundId,
+          number: 1,
+          prompt: game.prompt,
+          optionA: 'Tea',
+          optionB: 'Coffee',
+          skipped: false,
+          a: 0,
+          b: 0,
+          passes: 0,
+          missing: 2,
+          percentA: 0,
+          percentB: 0,
+          choices: [],
+        },
+      ],
+    })
+    expect(
+      screen.queryByRole('list', { name: 'Player choices for round 1' }),
+    ).not.toBeInTheDocument()
+    const unavailable = screen.queryByText(
+      'Individual choices are unavailable for this earlier round',
+    )
+    if (gameId === 'most-likely-to') expect(unavailable).not.toBeInTheDocument()
+    else expect(unavailable).toBeVisible()
+  },
+)

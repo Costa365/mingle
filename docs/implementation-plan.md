@@ -775,3 +775,46 @@ fits on both viewports. Keyboard navigation, accessibility, button geometry and
 overflow checks passed, as did TypeScript/production build, lint, formatting and
 diff whitespace checks. Browser execution used the installed Chromium override
 recorded above. Hosted CI remains the merge gate.
+
+### Finished-game named voting summaries — 2026-10-29
+
+The user requested named voting summaries like This or That. They explicitly
+confirmed that Most Likely To must keep nomination totals only. Would You Rather,
+Never Have I Ever and Two Truths and a Lie therefore persist eligible finalized
+choices at reveal but project them only after game finish. Presenters are not
+voters; skipped/unrevealed rounds never expose their submissions. Names of removed
+players use the existing neutral label; finalized choices do not change after
+roster changes. Old aggregate-only rounds are not backfilled from private inputs.
+The experience-game summary includes its statement; statement guesses resolve to
+the frozen statement text. No transport schema or database migration is required.
+
+Acceptance and coverage:
+
+- `M4GameRulesTests`: each new named-summary game, pre-finish privacy, finalized
+  choices/pass/missing responses, late arrivals, removed-player labels, presenter
+  exclusion, stale submissions, skipped rounds and legacy aggregate-only states;
+  nomination results remain anonymous at finish.
+- `M4GameFunctionalTests`: real HTTP/hub projections before/after finish for all
+  three games, permissions/stale submissions, receipt retry, SQLite restarts
+  before and after finish, removed-player labels and revoked access.
+- `rooms.test.ts`: named choices accept finalized result option values without
+  adding game-specific transport rules; unknown/mismatched values are rejected.
+- `GamePanel.test.tsx`: each game's labels and named summary, statement resolution,
+  passes/missing answers, skipped rounds, legacy fallback and anonymous exceptions.
+- `m4.spec.ts`: all five games finish in real desktop/mobile browsers; new names
+  appear only at finish, skipped rounds stay private, anonymous nominations stay
+  anonymous, statement text is shown, summaries survive reload, accessibility
+  and mobile overflow remain checked.
+
+Implemented and locally verified: all 99 Core tests, 69 API unit/functional tests
+and 146 frontend unit/component tests passed. All 14 desktop/mobile game and M4
+browser cases passed, including API restart recovery. After generalizing result
+choice validation to use each result's option values, the final production build
+passed both five-game desktop/mobile summary cases. That rerun exposed an ordering
+assumption in the new browser assertion; it now checks choices by player name,
+independent of roster order, and both cases passed. Desktop and 360px screenshots
+were visually reviewed; keyboard, accessibility and overflow checks passed.
+Backend/frontend builds, C# formatting, TypeScript, lint, frontend formatting,
+generated-contract verification and diff whitespace checks passed. Browser tests
+used the installed Chromium override recorded above. Hosted CI remains the merge
+gate. Existing aggregate-only historical rounds cannot display individual choices.

@@ -96,7 +96,17 @@ Responses can be changed until the stage closes. Results include submitted votes
 only, with passes and missing answers shown separately. Most Likely To has no
 self-voting; when fewer than two eligible players remain, offer skip or end. Two
 Truths and a Lie likewise needs at least two players for a voting round. Other
-games allow one-player previews. A cumulative leaderboard is outside initial scope.
+games allow one-player previews.
+
+Finished-game summaries list each eligible player's finalized choice, pass or
+missing answer for This or That, Would You Rather?, Never Have I Ever, and Two
+Truths and a Lie (using the statement text for guesses and excluding the presenter).
+This or That keeps named choices at round reveal; the other three show names only
+when the game finishes. Skipped/unrevealed rounds never publish their choices.
+Most Likely To retains anonymous nomination totals, including in the summary.
+Older aggregate-only rounds remain readable with an explanation that individual
+choices are unavailable; do not reconstruct them from retained private inputs.
+A cumulative leaderboard is outside initial scope.
 
 ## Prompt library
 

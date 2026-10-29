@@ -107,7 +107,7 @@ public class PromptGame(IGameRandom random, string id, string kind, bool namedRe
         var percent = a + b == 0 ? 0 : (int)Math.Round(100.0 * a / (a + b), MidpointRounding.AwayFromZero);
         state.Results.Add(new(state.RoundId, state.RoundNumber, state.Prompt, state.OptionA, state.OptionB,
             skipped, a, b, passes, eligible.Length - (kind == "nomination" ? validNominations : a + b) - passes, percent, a + b == 0 ? 0 : 100 - percent,
-            skipped || !namedReveal ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
+            skipped || kind == "nomination" ? [] : eligible.Select(id => new PlayerChoiceView(id, room.Members.Single(m => m.Id == id).Name,
                 state.Answers.GetValueOrDefault(id)?.Choice ?? "missing")).ToArray(), totals));
     }
     public string Apply(string json, Room room, Membership actor, GameCommand command)
@@ -195,7 +195,7 @@ public class PromptGame(IGameRandom random, string id, string kind, bool namedRe
             kind == "nomination" && own?.Choice != "pass" && !eligible.Any(id => id != viewer.Id && id.ToString() == own?.Choice) ? null : own?.Choice, own?.Revision ?? 0, actions,
             state.Results.Select(result => result with
             {
-                Choices = (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
+                Choices = kind == "nomination" || !namedReveal && state.Stage != "finished" ? [] : (result.Choices ?? []).Select(choice => room.Members.Any(m => m.Id == choice.ParticipantId && !m.Removed)
                     ? choice : choice with { Name = "Removed player" }).ToArray(),
                 Totals = result.Totals?.Select(total => room.Members.Any(m => !m.Removed && m.Id.ToString() == total.Value) ? total : total with { Label = "Removed player" }).ToArray()
             }).ToArray(), Pool(state, room).Count(p => !state.UsedPromptIds.Contains(p.Id)), Pool(state, room).Length,

@@ -323,7 +323,10 @@ function GameSessionPanel({
                 {game.stage === 'finished' && <h2>Thanks for playing</h2>}
                 {['revealed', 'finished'].includes(game.stage) && (
                   <RoundResults
-                    named={gameId === 'this-or-that'}
+                    named={
+                      gameId === 'this-or-that' ||
+                      (game.stage === 'finished' && gameId !== 'most-likely-to')
+                    }
                     results={game.stage === 'revealed' ? game.results.slice(-1) : game.results}
                   />
                 )}
@@ -495,7 +498,7 @@ function RoundResults({
           <p>
             {result.presenterName
               ? `Presenter: ${result.presenterName}`
-              : result.optionA === 'Nominate a teammate'
+              : ['Nominate a teammate', 'I have'].includes(result.optionA)
                 ? result.prompt
                 : `${result.optionA} / ${result.optionB}`}
           </p>
@@ -543,33 +546,35 @@ function RoundResults({
               <p>
                 {result.passes} passed · {result.missing} unanswered
               </p>
-              {(result.choices?.length ?? 0) > 0 ? (
-                <ul
-                  className="revealed-choices"
-                  aria-label={`Player choices for round ${result.number}`}
-                >
-                  {result.choices!.map((choice) => (
-                    <li key={choice.participantId}>
-                      <strong>{choice.name}</strong>
-                      <span>
-                        {choice.choice === 'a'
-                          ? result.optionA
-                          : choice.choice === 'b'
-                            ? result.optionB
-                            : choice.choice === 'pass'
-                              ? 'Passed'
-                              : 'No answer'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : !named ? null : (
-                <p className="room-note">
-                  Individual choices are unavailable for this earlier round
-                </p>
-              )}
             </>
           )}
+          {!result.skipped &&
+            ((result.choices?.length ?? 0) > 0 ? (
+              <ul
+                className="revealed-choices"
+                aria-label={`Player choices for round ${result.number}`}
+              >
+                {result.choices!.map((choice) => (
+                  <li key={choice.participantId}>
+                    <strong>{choice.name}</strong>
+                    <span>
+                      {choice.choice === 'a'
+                        ? result.optionA
+                        : choice.choice === 'b'
+                          ? result.optionB
+                          : choice.choice === 'pass'
+                            ? 'Passed'
+                            : choice.choice === 'missing'
+                              ? 'No answer'
+                              : (result.totals?.find((total) => total.value === choice.choice)
+                                  ?.label ?? 'Choice unavailable')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : !named ? null : (
+              <p className="room-note">Individual choices are unavailable for this earlier round</p>
+            ))}
         </article>
       ))}
     </div>
