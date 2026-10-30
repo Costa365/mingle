@@ -99,10 +99,13 @@ test('room authoring validates, survives restart and preserves round text throug
   await page.getByRole('button', { name: 'Return to game →' }).click()
   await expect(page.getByRole('button', { name: 'Build a kite', exact: true })).toBeVisible()
   await backend.stop()
-  await expect(page.getByText('Reconnecting…', { exact: true })).toBeVisible()
-  await backend.start()
-  await page.getByRole('button', { name: 'Retry connection' }).click()
-  await expect(page.getByText('Connected', { exact: true })).toBeVisible()
+  try {
+    await expect(page.getByText('Reconnecting…', { exact: true })).toBeVisible()
+  } finally {
+    await backend.start()
+  }
+  // Automatic recovery can finish before a manual retry button could be clicked.
+  await expect(page.getByText('Connected', { exact: true })).toBeVisible({ timeout: 25_000 })
   expect((await snapshot(page, id)).game!.optionA).toBe('Build a kite')
   await page.getByRole('button', { name: 'Reveal answers' }).click()
   await page.getByRole('button', { name: 'Reset pool and draw', exact: true }).click()

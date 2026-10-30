@@ -1,5 +1,18 @@
 # Implementation plan
 
+## Prompt restart browser test race — 2026-10-30
+
+The desktop prompt-authoring CI test timed out waiting for a manual Retry
+connection button after restarting the API. Automatic reconnection can remove
+that button before Playwright clicks it. The test now waits for Connected,
+matching the existing room/game restart tests, and restarts the API in a finally
+block so a failed outage assertion cannot leave later tests without a backend.
+It still checks the pre-edit round text after restart, the edited prompt on the
+next round, and preservation of round text after deletion. No application
+behavior changed. Existing `RoomPages.test.tsx` covers manual retry separately.
+The browser test must pass on desktop and mobile in CI; it cannot be rerun in
+this session because Node.js/.NET and Docker daemon access are unavailable.
+
 ## Shared router production profile — 2026-10-30
 
 Operator-test follow-up: the image probes readiness at `127.0.0.1:8080`;
