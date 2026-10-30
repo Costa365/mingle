@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import unittest
 from urllib.parse import urlparse
 
@@ -62,3 +63,33 @@ class RouterProfileTests(unittest.TestCase):
         self.assertIn("proxy_set_header X-Forwarded-Proto $mingle_forwarded_proto;", server)
         self.assertIn("proxy_set_header X-Forwarded-For $remote_addr;", server)
         self.assertNotIn("$http_x_forwarded", server + router)
+
+    def test_rehearsal_router_has_readiness_for_compose_wait(self):
+        script = (ROOT / "scripts/verify-router.sh").read_text()
+        override = script.split("<<'YAML'\n", 1)[1].split("\nYAML", 1)[0]
+        nginx = script.split("<<'NGINX'\n", 1)[1].split("\nNGINX", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "compose.yaml"
+            path.write_text(override)
+            environment = dict(os.environ, MINGLE_ROUTER_TEST_DIRECTORY=directory,
+                               MINGLE_ROUTER_TEST_IMAGE="mingle-unit-web",
+                               MINGLE_ROUTER_TEST_NETWORK="mingle-unit-edge",
+                               MINGLE_ROUTER_TEST_PORT="19443", MINGLE_ADMIN_CREDENTIAL="")
+            result = subprocess.run(
+                ["docker", "compose", "-f", str(ROOT / "docker-compose-prod.yml"),
+                 "-f", str(path), "config", "--format", "json"],
+                cwd=ROOT, env=environment, capture_output=True, text=True, check=True)
+        config = json.loads(result.stdout)
+        router = config["services"]["router"]
+        healthcheck = router["healthcheck"]
+        self.assertFalse(healthcheck.get("disable", False))
+        self.assertEqual(healthcheck["test"][0:2], ["CMD", "wget"])
+        probe = urlparse(healthcheck["test"][-1])
+        self.assertEqual(probe.hostname, "127.0.0.1")
+        self.assertIn(f"listen {probe.port};", nginx)
+        self.assertIn(f"location = {probe.path}", nginx)
+        self.assertIn("proxy_pass http://web:8080/api/health/ready;", nginx)
+        self.assertIn("proxy_set_header Host localhost;", nginx)
+        self.assertEqual([port["target"] for port in router["ports"]], [8443])
+        self.assertNotIn("ports", config["services"]["web"])
+        self.assertFalse(config["networks"]["nginx-proxy"].get("external", False))

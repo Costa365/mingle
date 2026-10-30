@@ -28,6 +28,17 @@ chmod 644 "$private_directory/tls/"*.pem
 export NODE_EXTRA_CA_CERTS="$private_directory/tls/fullchain.pem"
 cat > "$private_directory/router.conf" <<'NGINX'
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+# Unpublished readiness listener for Docker; exercise both HTTP proxy hops.
+server {
+    listen 8080;
+    access_log off;
+    error_log /dev/null;
+    location = /healthz {
+        proxy_pass http://web:8080/api/health/ready;
+        proxy_set_header Host localhost;
+    }
+    location / { return 404; }
+}
 server {
     listen 8443 ssl;
     ssl_certificate /etc/nginx/tls/fullchain.pem;
@@ -71,7 +82,11 @@ services:
     networks:
       - nginx-proxy
     healthcheck:
-      disable: true
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 3s
+      timeout: 3s
+      start_period: 5s
+      retries: 10
 networks:
   nginx-proxy:
     external: false

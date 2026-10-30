@@ -1,5 +1,21 @@
 # Implementation plan
 
+## Shared router rehearsal readiness fix — 2026-10-30
+
+CI built both application images and reached healthy API/frontend containers,
+then Compose `up --wait` rejected the test router because its health check was
+disabled. Added an explicit router readiness probe on an unpublished HTTP
+listener. It forwards `/healthz` through the frontend to the real API readiness
+endpoint; only the TLS listener is host-published. The TLS/API/browser and
+restart checks remain required after startup, with certificate verification.
+`test_router_profile.py` now resolves the actual rehearsal override and checks
+that the enabled probe targets its configured listener/path, reaches API
+readiness and preserves isolated network/port bindings. All 17 verification
+unit/configuration tests and shell syntax checks pass locally. The full Docker
+functional rehearsal still requires CI; Docker daemon access is unavailable
+here. The reported CI run did not reach TLS/browser assertions, so those are
+not claimed as passing.
+
 ## Prompt restart browser test race — 2026-10-30
 
 The desktop prompt-authoring CI test timed out waiting for a manual Retry
