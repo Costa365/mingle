@@ -1,5 +1,39 @@
 # Implementation plan
 
+## Shared router production profile — 2026-10-30
+
+Operator-test follow-up: the image probes readiness at `127.0.0.1:8080`;
+the initial host allowlist admitted `localhost` but omitted that IP. Added the
+probe IP to production and isolated rehearsal allowlists. Regression coverage:
+`test_router_profile.py` derives the actual probe hostname from the Dockerfile
+and checks both allowlists; `DeploymentTests` exercises readiness with the public
+host and both loopback hosts through the real API and rejects an unrelated host.
+Configuration/unit checks pass; the new API functional test and full container
+rehearsal remain unexecuted locally because .NET and Docker daemon access are
+unavailable in this session.
+
+Added standalone `docker-compose-prod.yml` for the server's existing
+`nginx-proxy` network and Cloudflare hostname `mingle.costa365.site`, with
+loopback diagnostics on port 8085. The API stays on its private network with
+durable storage, exact HTTPS public origin, Secure cookies and a single trusted
+frontend peer. The router-specific frontend overwrites forwarding headers;
+direct HTTP/TLS profiles retain their actual scheme.
+
+Acceptance and coverage:
+
+| Acceptance criterion | Unit/configuration coverage | Functional coverage |
+| --- | --- | --- |
+| Only frontend joins shared router; host port 8085 is loopback-only; data persists | `test_router_profile.py` checks resolved Compose isolation, bindings and volume | `verify-router.sh` uses isolated Compose networks and real SQLite/API restart |
+| Public HTTPS origin, Secure cookies and forwarding cannot be selected by clients | `test_router_profile.py` checks trusted peer/origin/configuration; existing `DeploymentTests` checks proxy authorization | `verify-router.sh` uses a TLS router deliberately sending incorrect forwarding headers; reused API probe checks cookies, origin/CSRF rejection, body limits, cache boundaries and authenticated WebSockets |
+| Browser gameplay and identity/private answers survive restart through both proxies | Existing application unit coverage; no gameplay changes | Reused HTTPS browser sign-in/round/reload/reveal flow and saved API identity/answer checks after restart |
+
+Local configuration tests pass (15 verification unit tests), Compose resolves,
+and shell syntax checks pass. Docker daemon access is denied in this agent
+session, so the new functional rehearsal cannot run here. CI now requires that
+rehearsal alongside existing direct HTTP/TLS checks. The profile is ready for
+operator testing; functional acceptance and actual Cloudflare verification remain
+pending, and no public-launch milestone is marked complete.
+
 ## Goal and current state
 
 Deliver the application in [product.md](product.md) using the proposed

@@ -76,6 +76,59 @@ hub routes are not cached or buffered. Hashed assets receive immutable cache
 headers; HTML is revalidated. Fonts are bundled, so the UI makes no external font
 requests. Browser security headers include a same-origin Content Security Policy.
 
+## Shared server router and Cloudflare
+
+For `mingle.costa365.site` on the existing server, use the standalone production
+file (do not combine it with `compose.yaml` or the direct-TLS override):
+
+```bash
+docker compose -f docker-compose-prod.yml up --build --detach --wait
+docker compose -f docker-compose-prod.yml ps
+```
+
+Open **https://mingle.costa365.site**. The external Docker network `nginx-proxy`
+must already exist and contain the server's router. The frontend advertises
+`VIRTUAL_HOST=mingle.costa365.site` and `VIRTUAL_PORT=8080`. Its loopback-only
+diagnostic port is **8085**, so other services using host port 8080 are unaffected.
+Check routing from the host with:
+
+```bash
+curl --fail -H 'Host: mingle.costa365.site' http://127.0.0.1:8085/api/health/ready
+```
+
+Use the public HTTPS URL for gameplay: Secure cookies will not work through the
+plain HTTP diagnostic port. This profile sets the exact public origin, requires
+Secure cookies, and trusts only the frontend's fixed private IP at the API. The
+frontend overwrites forwarded scheme with `https` and forwarded address with its
+immediate peer; it never trusts incoming client-IP or scheme headers. Rate limits
+therefore share the router's peer budget. Only the frontend joins the shared
+router network; the API and persistent `app-data` volume stay private to Mingle.
+The subnet/IP overrides described below also apply to this file.
+
+Require HTTPS at Cloudflare (Always Use HTTPS) and preserve Host, Origin,
+cookies and WebSocket upgrades through the existing router. Bypass caching for
+API/hub paths as listed below. Cloudflare Flexible mode reaches the server over
+HTTP; Full (strict) requires a valid origin certificate on the shared router.
+This Compose file does not issue or install an origin certificate or change your
+Cloudflare configuration. See [Cloudflare encryption modes](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/).
+
+An optional `MINGLE_ADMIN_CREDENTIAL` in the ignored `.env` enables `/admin`.
+Other `.env` values from the direct-TLS profile, such as its origin/certificate
+directory, are not used here. To update or stop this installation, keep using
+`-f docker-compose-prod.yml`; `down` preserves data, while `down --volumes`
+deletes it. The normal project name is `mingle` when run from this directory;
+check `docker compose ls` before using the backup commands below. Do not run
+the local and production files as separate installations with the same project
+name. If local Mingle containers already exist, back up their volume before
+switching profiles; Compose reuses the project's existing volume.
+
+`bash scripts/verify-router.sh` rehearses this topology in an isolated project
+with a disposable TLS router/network/certificate, real API/SQLite, Secure cookies,
+WebSockets, browser gameplay, hostile forwarding headers, origin/CSRF rejection,
+and identity/private-answer recovery after API restart. It never uses the live
+`nginx-proxy` network or host port 8085. Actual Cloudflare/router verification and
+the public-launch privacy work remain required for public launch.
+
 ## CDN and HTTPS boundary
 
 The default Compose file is for loopback HTTP. The opt-in production override

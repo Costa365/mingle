@@ -68,6 +68,12 @@ For frontend/API development without Docker, follow the
 [development guide](docs/development.md). See the
 [operator guide](docs/operations.md) for configuration and persistence.
 
+For this server's existing Nginx router and Cloudflare at `mingle.costa365.site`,
+run `docker compose -f docker-compose-prod.yml up --build --detach --wait`.
+The local diagnostic port is 8085. See the
+[shared router setup](docs/operations.md#shared-server-router-and-cloudflare)
+for HTTPS requirements and verification.
+
 ## Documentation
 
 | Document | Purpose |
