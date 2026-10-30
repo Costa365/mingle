@@ -16,6 +16,8 @@ A facilitator creates a room and shares an invitation. Players join with a displ
 name, play on desktop or mobile, and recover their place after a connection drops.
 The facilitator controls the pace and can continue without waiting for everyone.
 
+Hosted at [https://mingle.costa365.site](https://mingle.costa365.site).
+
 ## Status
 
 The foundation and **M1 — Rooms, identity, and recovery** are implemented. You can
