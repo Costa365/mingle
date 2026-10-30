@@ -14,6 +14,31 @@ namespace TeamGames.Api.Tests;
 public sealed class DeploymentTests
 {
     [Fact]
+    public async Task ProductionHostFilterAllowsLoopbackReadinessAndPublicHostButRejectsOthers()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "mingle-host-filter-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var factory = new ApiFactory(directory, settings: new()
+            {
+                ["AllowedHosts"] = "mingle.costa365.site;localhost;127.0.0.1"
+            });
+            using var client = factory.CreateClient();
+            foreach (var host in new[] { "127.0.0.1:8080", "localhost:8080", "mingle.costa365.site" })
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "/api/health/ready");
+                request.Headers.Host = host;
+                using var response = await client.SendAsync(request);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+            using var invalid = new HttpRequestMessage(HttpMethod.Get, "/api/health/ready");
+            invalid.Headers.Host = "attacker.invalid";
+            using var rejected = await client.SendAsync(invalid);
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+    [Fact]
     public void ProxyConfigurationFailsClosedUnlessOriginAndCookiesAreSecure()
     {
         Assert.Null(DeploymentSettings.Read(new ConfigurationBuilder().Build()).KnownProxy);

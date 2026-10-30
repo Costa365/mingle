@@ -52,9 +52,11 @@ Set `Storage__DataDirectory` to a different directory when needed.
 | Frontend production build | `npm --prefix web run build` |
 | Browser functional tests | `npm --prefix web run test:e2e` |
 | HTTPS and backup/restore rehearsal | `bash scripts/verify-production.sh` |
+| Shared router HTTPS and recovery rehearsal | `bash scripts/verify-router.sh` |
 | 20 × 20 load and reconnect integrity | `bash scripts/verify-load.sh` |
 | Validate Compose | `docker compose config --quiet` |
 | Run deployment | `docker compose up --build --detach --wait` |
+| Run production behind existing router | `docker compose -f docker-compose-prod.yml up --build --detach --wait` |
 | Build/lint/unit/API verification | `bash scripts/verify.sh` |
 | Container/browser verification | `bash scripts/verify-compose.sh` |
 

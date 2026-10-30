@@ -49,6 +49,8 @@ jobs:
         run: bash scripts/verify-compose.sh 2>&1 | tee artifacts/verification/compose-verification.log
       - name: HTTPS and backup/restore rehearsal
         run: bash scripts/verify-production.sh 2>&1 | tee artifacts/verification/production-verification.log
+      - name: Shared router HTTPS and recovery rehearsal
+        run: bash scripts/verify-router.sh 2>&1 | tee artifacts/verification/router-verification.log
       - name: 400-client capacity and reconnect integrity
         # Shared runner timing is recorded; the reference-host latency target is measured separately.
         env:
